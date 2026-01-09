@@ -1,0 +1,74 @@
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+target/
+dist/
+build/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+*.js.map
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.dylib
+*.dll
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.secret
+credentials.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+*.log
+
+# AI Active State (CRITICAL: Do not commit these to template)
+# These files are generated when users start tasks
+IMPLEMENTATION_PLAN.md
+CHECKLIST.md
+NOTES.md
+
+# Package lock files (users should generate their own)
+package-lock.json
+yarn.lock
+Pipfile.lock
+poetry.lock
+Cargo.lock

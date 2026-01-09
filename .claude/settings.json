@@ -1,0 +1,57 @@
+{
+  "contextManagement": {
+    "maxTokens": 200000,
+    "priorityFiles": [
+      "CLAUDE.md",
+      "IMPLEMENTATION_PLAN.md",
+      "CHECKLIST.md",
+      "ai/DEFINITIONS/DONE_DEFINITION.md"
+    ],
+    "ignoredPaths": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".cache/**",
+      "*.log",
+      "*.tmp",
+      "ai/TASKS/archive/**"
+    ]
+  },
+  "environment": {
+    "language": "TypeScript",
+    "runtime": "Node.js",
+    "packageManager": "npm",
+    "testFramework": "Jest"
+  },
+  "hints": {
+    "alwaysReadFirst": [
+      "CLAUDE.md",
+      "ai/DEFINITIONS/DONE_DEFINITION.md"
+    ],
+    "readOnceAtTaskStart": [
+      "docs/TECH_SPEC.md",
+      "docs/ARCHITECTURE.md",
+      "docs/ANTI_PATTERNS.md",
+      "docs/PRD.md",
+      "ai/CONTEXT.md",
+      "tests/README.md"
+    ],
+    "beforeArchiving": [
+      "Run src/scripts/verify-task.sh",
+      "Check all CHECKLIST.md items complete",
+      "Create ADR if architectural decisions made",
+      "Update IMPLEMENTATION_PLAN.md status to DONE"
+    ]
+  },
+  "scopeControl": {
+    "enforceOneTaskAtATime": true,
+    "requireVerificationBeforeDone": true,
+    "blockMultipleActiveTasks": true,
+    "activeTaskLocation": "root",
+    "archiveLocation": "ai/TASKS/archive/"
+  },
+  "tokenOptimization": {
+    "note": "Priority files are sent on every turn. Other docs should be read once at task start and kept in conversation history."
+  }
+}
