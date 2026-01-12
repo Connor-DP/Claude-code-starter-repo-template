@@ -56,7 +56,77 @@ The following files in the **root directory** represent the CURRENT active task:
 
 **Critical**: When these files exist in root, they are the ONLY active task. No other work should be in progress.
 
-### 2. Starting Work
+### 2. Environment Configuration (First Task Only)
+
+**Before starting your first task**, configure `.claude/settings.json` for your stack:
+
+#### For Node.js/TypeScript (Default):
+```json
+{
+  "commands": {
+    "test": "npm test",
+    "lint": "npm run lint",
+    "typecheck": "npm run typecheck",
+    "build": "npm run build",
+    "format": "npm run format:check"
+  },
+  "verification": {
+    "srcDir": "src"
+  }
+}
+```
+
+#### For Python:
+```json
+{
+  "commands": {
+    "test": "pytest",
+    "lint": "flake8 .",
+    "typecheck": "mypy .",
+    "build": "python -m build",
+    "format": "black --check ."
+  },
+  "verification": {
+    "srcDir": "src"
+  }
+}
+```
+
+#### For Go:
+```json
+{
+  "commands": {
+    "test": "go test ./...",
+    "lint": "golangci-lint run",
+    "typecheck": "go vet ./...",
+    "build": "go build ./...",
+    "format": "gofmt -l ."
+  },
+  "verification": {
+    "srcDir": "."
+  }
+}
+```
+
+#### For Rust:
+```json
+{
+  "commands": {
+    "test": "cargo test",
+    "lint": "cargo clippy",
+    "typecheck": "cargo check",
+    "build": "cargo build",
+    "format": "cargo fmt -- --check"
+  },
+  "verification": {
+    "srcDir": "src"
+  }
+}
+```
+
+**Note:** See `.claude/settings.json` for example configurations. The verification script (`verify-task.sh`) reads these commands automatically.
+
+### 3. Starting Work
 
 **Automated (recommended):**
 ```bash
@@ -76,7 +146,7 @@ The following files in the **root directory** represent the CURRENT active task:
 7. Review relevant docs/ files for context (PRD, ARCHITECTURE, APP_FLOW, ANTI_PATTERNS)
 8. Check tests/README.md to understand test conventions
 
-### 3. During Work (or use `/implement` command)
+### 4. During Work (or use `/implement` command)
 
 - Follow the active task in **root** `IMPLEMENTATION_PLAN.md`
 - Update `CHECKLIST.md` as you complete items
@@ -89,7 +159,7 @@ The following files in the **root directory** represent the CURRENT active task:
 - Write tests in /tests/ (or project-specific location)
 - Update `IMPLEMENTATION_PLAN.md` if approach deviates from original plan
 
-### 4. Completing Work (or use `/review` command)
+### 5. Completing Work (or use `/review` command)
 
 - Run `src/scripts/verify-task.sh` to validate completion
 - Ensure all ai/DEFINITIONS/DONE_DEFINITION.md criteria are met
@@ -101,7 +171,7 @@ The following files in the **root directory** represent the CURRENT active task:
   - Use template from docs/adr/0001-example-decision.md
 - Update `IMPLEMENTATION_PLAN.md` status to READY_FOR_REVIEW or DONE
 
-### 5. Archival
+### 6. Archival
 
 **Automated (recommended):**
 ```bash

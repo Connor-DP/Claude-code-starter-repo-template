@@ -49,6 +49,21 @@ Comprehensive quality check before marking done.
 
 ---
 
+### `/migrate` - Refactor Legacy Code
+Migrate legacy code to current architectural standards.
+
+**When to use:**
+- Refactoring old code to new patterns
+- Removing anti-patterns from existing code
+- Updating code to match ARCHITECTURE.md
+- Bringing legacy modules up to quality standards
+
+**Output:** Modernized code following current standards
+
+**Read:** [migrate.md](./migrate.md)
+
+---
+
 ## Usage
 
 ### For AI Agents
@@ -59,14 +74,19 @@ These documents also serve as checklists and guides for manual development work.
 
 ## Command Workflow
 
-Typical task flow:
+### New Feature Development
 ```
 /plan → /implement → /review → archive
 ```
 
-You can iterate:
+### Iterative Development
 ```
 /plan → /implement → /review (issues found) → /implement → /review → archive
+```
+
+### Legacy Code Migration
+```
+/migrate → /plan (migration strategy) → /implement → /review → archive
 ```
 
 ## Customization
@@ -83,12 +103,12 @@ These commands implement the workflows defined in `/CLAUDE.md`. They are subordi
 
 ## Future Commands
 
-Consider adding:
-- `/migrate` - Database or system migrations
-- `/refactor` - Systematic refactoring workflow
+Consider adding for your project:
 - `/debug` - Debugging workflow
 - `/deploy` - Deployment checklist
 - `/document` - Documentation generation
+- `/security` - Security audit workflow
+- `/performance` - Performance optimization workflow
 
 ---
 

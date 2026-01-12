@@ -42,6 +42,7 @@ ADRs are numbered sequentially:
 | Number | Title | Status | Date |
 |--------|-------|--------|------|
 | [0001](./0001-example-decision.md) | Example Decision Template | Example | - |
+| [0002](./0002-jwt-authentication.md) | JWT-Based Authentication | Accepted | 2026-01-10 |
 
 ---
 

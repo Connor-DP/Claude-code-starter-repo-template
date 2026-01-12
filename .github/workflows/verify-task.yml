@@ -1,0 +1,241 @@
+name: Verify Task Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  verify:
+    name: Task Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+        # Only if package.json exists
+        if: hashFiles('package.json') != ''
+
+      - name: Install dependencies
+        run: npm ci
+        if: hashFiles('package.json') != ''
+
+      - name: Run linter
+        run: npm run lint
+        if: hashFiles('package.json') != ''
+        continue-on-error: false
+
+      - name: Run type checking
+        run: npm run type-check
+        if: hashFiles('package.json') != ''
+        continue-on-error: false
+
+      - name: Run tests
+        run: npm test
+        if: hashFiles('package.json') != ''
+        env:
+          CI: true
+
+      - name: Check test coverage
+        run: npm run test:coverage
+        if: hashFiles('package.json') != ''
+        continue-on-error: true
+
+      - name: Run task verification script
+        run: |
+          if [ -f "./src/scripts/verify-task.sh" ]; then
+            chmod +x ./src/scripts/verify-task.sh
+            ./src/scripts/verify-task.sh
+          else
+            echo "⚠️  verify-task.sh not found, skipping"
+          fi
+
+      - name: Check for anti-patterns
+        run: |
+          echo "🔍 Checking for anti-patterns..."
+
+          # Example: Check for console.log in production code
+          if grep -r "console\.log" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//.*console\.log"; then
+            echo "❌ Found console.log statements in source code"
+            exit 1
+          fi
+
+          # Example: Check for hardcoded credentials
+          if grep -r -i "password.*=.*['\"]" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//"; then
+            echo "⚠️  Possible hardcoded credentials found"
+            exit 1
+          fi
+
+          # Example: Check for TODO comments
+          if grep -r "TODO" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//.*future" | grep -v "//.*later"; then
+            echo "⚠️  Found TODO comments - resolve before merging"
+            exit 1
+          fi
+
+          echo "✅ No anti-patterns detected"
+        continue-on-error: false
+
+      - name: Verify documentation completeness
+        run: |
+          echo "📚 Checking documentation..."
+
+          # Check if IMPLEMENTATION_PLAN.md exists in root (indicates active task)
+          if [ -f "IMPLEMENTATION_PLAN.md" ]; then
+            echo "📋 Active task detected: IMPLEMENTATION_PLAN.md exists"
+
+            # Verify CHECKLIST.md also exists
+            if [ ! -f "CHECKLIST.md" ]; then
+              echo "❌ IMPLEMENTATION_PLAN.md exists but CHECKLIST.md is missing"
+              exit 1
+            fi
+
+            # Check if status is DONE or READY_FOR_REVIEW
+            if ! grep -q "Status:.*\(DONE\|READY_FOR_REVIEW\)" IMPLEMENTATION_PLAN.md; then
+              echo "⚠️  IMPLEMENTATION_PLAN.md status is not DONE or READY_FOR_REVIEW"
+              echo "ℹ️  If this is a work-in-progress PR, this is expected"
+            fi
+          else
+            echo "✅ No active task in root (clean state)"
+          fi
+
+          # Check if README exists
+          if [ ! -f "README.md" ]; then
+            echo "⚠️  README.md not found"
+            exit 1
+          fi
+
+          echo "✅ Documentation checks passed"
+
+      - name: Check ADR index consistency
+        run: |
+          echo "📖 Verifying ADR index..."
+
+          if [ -d "docs/adr" ]; then
+            # Count ADR files (excluding README and templates)
+            adr_files=$(find docs/adr -name "*.md" ! -name "README.md" ! -name "*example*" | wc -l)
+
+            # Count entries in README (excluding header rows)
+            if [ -f "docs/adr/README.md" ]; then
+              readme_entries=$(grep -c "^\|.*\[.*\].*\|" docs/adr/README.md || echo 0)
+              # Subtract header rows (usually 2)
+              readme_entries=$((readme_entries - 2))
+
+              if [ $adr_files -gt $readme_entries ]; then
+                echo "⚠️  Found $adr_files ADR files but only $readme_entries entries in README"
+                echo "ℹ️  Remember to update docs/adr/README.md when creating ADRs"
+              else
+                echo "✅ ADR index is up to date"
+              fi
+            fi
+          fi
+
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for secrets in code
+        run: |
+          echo "🔐 Scanning for potential secrets..."
+
+          # Check for common secret patterns
+          patterns=(
+            "api[_-]?key"
+            "api[_-]?secret"
+            "access[_-]?token"
+            "auth[_-]?token"
+            "secret[_-]?key"
+            "private[_-]?key"
+            "aws[_-]?access"
+            "aws[_-]?secret"
+          )
+
+          found_secrets=false
+          for pattern in "${patterns[@]}"; do
+            if grep -r -i "$pattern.*=.*['\"]" . --include="*.ts" --include="*.js" --exclude-dir=node_modules --exclude-dir=dist 2>/dev/null | grep -v "process.env" | grep -v "//"; then
+              echo "⚠️  Potential secret found matching pattern: $pattern"
+              found_secrets=true
+            fi
+          done
+
+          if [ "$found_secrets" = true ]; then
+            echo "❌ Potential secrets detected in code"
+            echo "ℹ️  Use environment variables instead"
+            exit 1
+          fi
+
+          echo "✅ No secrets detected"
+
+      - name: Check for .env files in git
+        run: |
+          if git ls-files | grep -q "\.env$"; then
+            echo "❌ .env file is tracked in git"
+            echo "ℹ️  Add .env to .gitignore and remove from git history"
+            exit 1
+          fi
+          echo "✅ No .env files tracked in git"
+
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    if: hashFiles('package.json') != ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for unused dependencies
+        run: |
+          if command -v npx &> /dev/null; then
+            echo "📦 Checking for unused dependencies..."
+            npx depcheck --ignores="@types/*,eslint-*,prettier" || echo "⚠️  Some unused dependencies found"
+          fi
+        continue-on-error: true
+
+      - name: Check bundle size (if applicable)
+        run: |
+          if [ -f "package.json" ] && grep -q "build" package.json; then
+            echo "📊 Building project to check bundle size..."
+            npm run build || echo "⚠️  Build failed or not configured"
+          fi
+        continue-on-error: true
+
+  notify:
+    name: Report Status
+    runs-on: ubuntu-latest
+    needs: [verify, security, quality]
+    if: always()
+
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "📊 Workflow Results:"
+          echo "  Verification: ${{ needs.verify.result }}"
+          echo "  Security: ${{ needs.security.result }}"
+          echo "  Quality: ${{ needs.quality.result }}"
+
+          if [ "${{ needs.verify.result }}" != "success" ] || [ "${{ needs.security.result }}" != "success" ]; then
+            echo "❌ Some critical checks failed"
+            exit 1
+          fi
+
+          echo "✅ All critical checks passed"

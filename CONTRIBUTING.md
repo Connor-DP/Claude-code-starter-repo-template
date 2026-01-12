@@ -46,11 +46,23 @@ git checkout -b feature/your-improvement
 - Follow the existing structure
 - Update relevant documentation
 - Test your changes
+- Run `./src/scripts/verify-task.sh` if adding features
+- Check [docs/ANTI_PATTERNS.md](docs/ANTI_PATTERNS.md) for constraints
 
-### 4. Submit PR
+### 4. Before Submitting PR
+
+**Checklist:**
+- [ ] Documentation updated (README, relevant docs)
+- [ ] Examples added if introducing new features
+- [ ] Scripts tested on macOS and Linux (if applicable)
+- [ ] No breaking changes to core workflow (or clearly documented)
+- [ ] ADR created for architectural changes
+
+### 5. Submit PR
 - Describe what you changed and why
 - Reference any related issues
 - Ensure CI checks pass (if applicable)
+- Include before/after examples if relevant
 
 ## Guidelines
 
@@ -74,12 +86,59 @@ This template is built on these principles:
 
 Keep these in mind when contributing.
 
+## Working with Claude (AI Assistant)
+
+If you're using Claude to help with contributions:
+
+### Best Practices
+1. **Start with context:**
+   ```
+   I want to contribute to the AI-assisted development template.
+   Please read CLAUDE.md to understand the structure.
+   I want to [describe your contribution goal].
+   ```
+
+2. **Use the workflow for template improvements:**
+   - Let Claude create an `IMPLEMENTATION_PLAN.md` for your contribution
+   - Review the plan before implementing
+   - Follow the same discipline you'd use in a real project
+
+3. **Test thoroughly:**
+   - AI-generated changes should be reviewed by humans
+   - Test scripts on multiple platforms if changing bash scripts
+   - Verify documentation accuracy
+
 ## Questions?
 
 Open a discussion or issue! We're here to help.
+
+**For Security Issues:** Please email [maintainer] privately instead of opening a public issue.
 
 ---
 
 ## Code of Conduct
 
 Be respectful, constructive, and helpful. This is a learning community.
+
+### Expected Behavior
+- Welcome newcomers and help them learn
+- Provide constructive feedback
+- Focus on what's best for the community
+- Show empathy towards other community members
+
+### Unacceptable Behavior
+- Harassment or discriminatory language
+- Trolling or insulting comments
+- Spam or off-topic content
+- Publishing others' private information
+
+---
+
+## Recognition
+
+Contributors are recognized in:
+- GitHub contributors list
+- Release notes for significant contributions
+- Special thanks in README for major enhancements
+
+Thank you for helping improve this template! 🚀

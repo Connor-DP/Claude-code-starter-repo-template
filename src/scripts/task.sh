@@ -66,6 +66,29 @@ if [ "$ACTION" == "start" ]; then
     sed -i.bak "s/\[Task Title\]/$TASK_TITLE/g" "$ROOT_DIR/IMPLEMENTATION_PLAN.md"
     rm "$ROOT_DIR/IMPLEMENTATION_PLAN.md.bak"
 
+    # Install pre-commit hook if git repo and not already installed
+    if [ -d "$ROOT_DIR/.git" ] && [ ! -f "$ROOT_DIR/.git/hooks/pre-commit" ]; then
+        info "Installing pre-commit hook..."
+        cat > "$ROOT_DIR/.git/hooks/pre-commit" << 'EOF'
+#!/bin/bash
+# Auto-installed pre-commit hook for task verification
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+if [ -f "$SCRIPT_DIR/src/scripts/verify-task.sh" ]; then
+    echo "Running pre-commit verification..."
+    if ! bash "$SCRIPT_DIR/src/scripts/verify-task.sh"; then
+        echo "❌ Verification failed. Fix issues before committing."
+        echo "   To skip verification (not recommended): git commit --no-verify"
+        exit 1
+    fi
+    echo "✓ Verification passed"
+fi
+EOF
+        chmod +x "$ROOT_DIR/.git/hooks/pre-commit"
+        success "Pre-commit hook installed"
+    fi
+
     success "Task '$TASK_NAME' started"
     info "Files created in root directory:"
     echo "  - IMPLEMENTATION_PLAN.md"

@@ -141,24 +141,30 @@ git diff --staged
 
 ### If Everything Passes
 ✅ **Proceed to completion:**
-1. Update `IMPLEMENTATION_PLAN.md` - mark as complete
-2. Archive the task: `mv ai/TASKS/active/<task> ai/TASKS/archive/`
+1. Update `IMPLEMENTATION_PLAN.md` (in root) - mark status as READY_FOR_REVIEW or DONE
+2. Archive the task using script: `./src/scripts/task.sh finish "task-name"`
 3. Commit changes (if requested)
 4. Create PR (if requested)
 
+**Note:** The archive script automatically:
+- Runs verification one last time
+- Moves files from root to `ai/TASKS/archive/YYYY-MM-DD-task-name/`
+- Clears root directory for next task
+
 ### If Issues Found
 ❌ **Return to implementation:**
-1. Document issues in `NOTES.md`
-2. Update `CHECKLIST.md` to reflect remaining work
-3. Fix issues
-4. Return to step 1 (Automated Verification)
+1. Document issues in `NOTES.md` (in root)
+2. Update `CHECKLIST.md` (in root) to reflect remaining work
+3. Update `IMPLEMENTATION_PLAN.md` (in root) status to IN_PROGRESS
+4. Fix issues
+5. Return to step 1 (Automated Verification)
 
 ### If Blocked
 🚫 **Need help:**
-1. Document blocker in `NOTES.md`
-2. Update `IMPLEMENTATION_PLAN.md` with blocker info
+1. Document blocker in `NOTES.md` (in root)
+2. Update `IMPLEMENTATION_PLAN.md` (in root) with blocker info and status BLOCKED
 3. Ask user for guidance
-4. Keep task in `active/` until unblocked
+4. Keep task files in root until unblocked
 
 ## Common Issues
 
@@ -189,9 +195,17 @@ git diff --staged
 - Task ready to archive
 - Confidence in production-readiness
 - Clear documentation of what was built
+- `IMPLEMENTATION_PLAN.md` (in root) status updated to READY_FOR_REVIEW or DONE
 
 ## Next Steps
-- Archive completed task
-- Commit changes (if user requests)
-- Create pull request (if user requests)
-- Begin next task
+1. Run `./src/scripts/task.sh finish "task-name"` to archive (moves files from root to archive/)
+2. Commit changes (if user requests)
+3. Create pull request (if user requests)
+4. Begin next task with `./src/scripts/task.sh start "next-task-name"`
+
+---
+
+**Important:**
+- Task files live in **root directory** until archived
+- Archive script handles moving files to `ai/TASKS/archive/`
+- Root directory must be clear before starting next task

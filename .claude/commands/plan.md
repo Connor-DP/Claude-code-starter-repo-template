@@ -5,25 +5,46 @@ Create a comprehensive implementation plan for a new task.
 
 ## Workflow
 
-### 1. Understand Requirements
-- Read `/CLAUDE.md` for constitutional rules
-- Read `ai/DEFINITIONS/DONE_DEFINITION.md` for completion criteria
-- Review relevant `/docs/` files (PRD, TECH_SPEC, ARCHITECTURE, APP_FLOW)
-- Check `docs/ANTI_PATTERNS.md` for constraints
-
-### 2. Create Task Folder
+### 1. Check for Active Task
 ```bash
-# Create dated task folder
-DATE=$(date +%Y-%m-%d)
-SLUG="<descriptive-task-slug>"
-mkdir -p ai/TASKS/active/${DATE}-${SLUG}
+# Ensure no task is currently active
+if [ -f "IMPLEMENTATION_PLAN.md" ]; then
+    echo "⚠️  Task already active. Finish current task first."
+    exit 1
+fi
 ```
 
-### 3. Write Implementation Plan
-Create `ai/TASKS/active/<date>-<slug>/IMPLEMENTATION_PLAN.md`:
+**Critical:** Only ONE task can be active at a time (in root directory).
+
+### 2. Understand Requirements
+- Read [/CLAUDE.md](../../CLAUDE.md) for constitutional rules
+- Read [ai/DEFINITIONS/DONE_DEFINITION.md](../../ai/DEFINITIONS/DONE_DEFINITION.md) for completion criteria
+- Review relevant `/docs/` files (PRD, TECH_SPEC, ARCHITECTURE, APP_FLOW)
+- Check [docs/ANTI_PATTERNS.md](../../docs/ANTI_PATTERNS.md) for constraints
+
+### 3. Start New Task
+Use the task management script:
+```bash
+./src/scripts/task.sh start "descriptive-task-name"
+```
+
+This creates three files in the **root directory**:
+- `IMPLEMENTATION_PLAN.md`
+- `CHECKLIST.md`
+- `NOTES.md`
+
+**Note:** The script automatically installs a pre-commit hook if in a git repository.
+
+### 4. Fill in Implementation Plan
+Edit `IMPLEMENTATION_PLAN.md` in the root directory:
 
 ```markdown
-# Task: [Task Title]
+# Implementation Plan: [Task Title]
+
+**Status:** IN_PROGRESS
+**Started:** YYYY-MM-DD
+
+---
 
 ## Objective
 Clear, concise statement of what needs to be achieved.
@@ -31,64 +52,106 @@ Clear, concise statement of what needs to be achieved.
 ## Context
 Why is this needed? What problem does it solve?
 
+**Related Documents:**
+- [docs/PRD.md](docs/PRD.md) - Section X
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Component Y
+
+---
+
 ## Acceptance Criteria
-- [ ] Criterion 1
+- [ ] Criterion 1 (specific, testable)
 - [ ] Criterion 2
 - [ ] All tests passing
 - [ ] Documentation updated
+- [ ] No anti-patterns introduced
 
-## Approach
+---
+
+## Implementation Approach
 
 ### High-Level Strategy
 Describe the overall approach in 2-3 sentences.
 
-### Implementation Steps
+### Phase 1: [Name]
 1. **Step 1**: Description
    - Substep a
    - Substep b
 2. **Step 2**: Description
-3. **Step 3**: Description
+
+### Phase 2: [Name]
+...
 
 ### Files to Modify/Create
 - `path/to/file1.ts` - What changes
 - `path/to/file2.ts` - What changes
 - `tests/test-file.test.ts` - New tests
 
-### Risks & Considerations
-- Risk 1: Description and mitigation
-- Risk 2: Description and mitigation
+---
 
 ## Testing Strategy
-- Unit tests for X
-- Integration tests for Y
-- Manual testing: [specific scenarios]
+- **Unit tests:** What to test
+- **Integration tests:** What to test
+- **Manual testing:** Specific scenarios
 
-## Definition of Done
-Reference `ai/DEFINITIONS/DONE_DEFINITION.md` + task-specific criteria:
-- [ ] All acceptance criteria met
-- [ ] Tests written and passing
-- [ ] Code reviewed
-- [ ] Documentation updated
-- [ ] `src/scripts/verify-task.sh` passes
+---
+
+## Risks & Mitigations
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Risk 1 | High | Mitigation strategy |
+| Risk 2 | Medium | Mitigation strategy |
+
+---
+
+## Dependencies
+- External packages needed
+- Internal modules affected
+- Team members to consult
+
+---
+
+## Architectural Decisions
+List any decisions that may need ADRs:
+- Decision 1: Rationale
+- Decision 2: Rationale
+
+---
+
+## Success Metrics
+- How will we know this is complete?
+- What metrics matter?
 ```
 
-### 4. Create Checklist
-Create `ai/TASKS/active/<date>-<slug>/CHECKLIST.md` using template from existing example.
+### 5. Verify Plan Quality
+Before proceeding, check:
+- [ ] Does it avoid patterns in [docs/ANTI_PATTERNS.md](../../docs/ANTI_PATTERNS.md)?
+- [ ] Does it satisfy [ai/DEFINITIONS/DONE_DEFINITION.md](../../ai/DEFINITIONS/DONE_DEFINITION.md)?
+- [ ] Are there architectural decisions that need ADRs?
+- [ ] Is the scope reasonable and atomic?
+- [ ] Are acceptance criteria specific and testable?
+- [ ] Is the testing strategy comprehensive?
 
-### 5. Create Notes File
-Create `ai/TASKS/active/<date>-<slug>/NOTES.md` for exploratory context.
-
-### 6. Verify Plan
-- Does it avoid patterns in `docs/ANTI_PATTERNS.md`?
-- Does it satisfy `ai/DEFINITIONS/DONE_DEFINITION.md`?
-- Are there architectural decisions that need ADRs?
-- Is the scope reasonable and atomic?
+### 6. Get Approval (If Working with Others)
+- Review plan with Product Owner
+- Get technical review from team
+- Confirm scope and approach
+- Adjust based on feedback
 
 ## Outputs
-- `ai/TASKS/active/<date>-<slug>/IMPLEMENTATION_PLAN.md`
-- `ai/TASKS/active/<date>-<slug>/CHECKLIST.md`
-- `ai/TASKS/active/<date>-<slug>/NOTES.md`
-- Ready to begin implementation
+After running this command, you should have:
+- `IMPLEMENTATION_PLAN.md` in **root directory** (filled in)
+- `CHECKLIST.md` in **root directory** (ready to use)
+- `NOTES.md` in **root directory** (for scratchpad)
+- Clear understanding of the task
+- Approval to proceed
 
 ## Next Step
-Run `/implement` command or begin implementation following the plan.
+Run `/implement` command to begin systematic execution of the plan.
+
+---
+
+**Important Notes:**
+- Files live in **root directory** during active work
+- Only **one task active at a time**
+- When done, files move to `ai/TASKS/archive/YYYY-MM-DD-task-name/`
+- This is a **state machine** - root = active, archive = done

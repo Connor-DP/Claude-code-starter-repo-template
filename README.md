@@ -71,41 +71,99 @@ Every directory has a README. Every concept is explained. No guesswork.
 
 ---
 
+## ⚠️ When NOT to Use This Template
+
+**This template is powerful but not for everyone.** Skip it if:
+
+### ❌ You Want Quick Scaffolding
+- **Use instead:** `create-react-app`, `django-admin startproject`, etc.
+- **Why skip:** This template is about *process*, not code generation
+
+### ❌ Hackathon or Prototype Projects
+- **Use instead:** Just code freely
+- **Why skip:** The workflow overhead isn't worth it for throwaway code
+
+### ❌ "Just Vibe and Code" Workflows
+- **Use instead:** Your normal development process
+- **Why skip:** This enforces discipline - not everyone wants that
+
+### ❌ Single-File Scripts or Trivial Changes
+- **Use instead:** Edit the file directly
+- **Why skip:** Overkill for typos, one-liners, or simple fixes
+
+### When to Skip the Full Workflow (Even If Using This Template)
+
+You CAN use this template without the full workflow for:
+- **Typos and formatting fixes** - Just fix and commit
+- **Single-line changes** - No need for IMPLEMENTATION_PLAN.md
+- **Emergency hotfixes** - Fix first, document later
+- **Exploratory spikes** - Use NOTES.md only, skip the rest
+
+**Rule of thumb:** If the task takes < 10 minutes and touches < 3 files, skip the formal process.
+
+---
+
+## ✅ Who This Template IS For
+
+### Perfect For:
+- **Solo founders** building real products with AI
+- **Product Owners** who want systematic AI collaboration
+- **Senior engineers** tired of AI chaos
+- **Teams** that need AI development standards
+
+### Use This When:
+- Building production software (not prototypes)
+- Working on non-trivial features (not quick fixes)
+- You want quality gates (not speed at all costs)
+- Context loss is a problem (long projects)
+
+**Bottom line:** This is for people who want **systematic, auditable AI-assisted development** - not quick hacks.
+
+---
+
 ## 🚀 Quick Start
 
 ### For Product Owners (No Coding Required)
 
-1. **Clone this repository:**
+1. **Clone and Initialize:**
    ```bash
+   # Clone the repo
    git clone https://github.com/YOUR-USERNAME/ai-dev-template.git my-project
    cd my-project
+
+   # Start fresh (removes template history) & initialize git
+   rm -rf .git && git init
+
+   # Make scripts executable & check environment
+   chmod +x src/scripts/*.sh
+   ./src/scripts/doctor.sh
    ```
 
 2. **Customize for your project:**
-   - Replace `README.md` with `README_PROJECT.md` (rename it)
-   - Edit `docs/PRD.md` - describe what you're building
-   - Edit `docs/APP_FLOW.md` - describe user journeys
-   - Edit `.claude/settings.json` - update tech stack
+   - Rename `README_PROJECT.md` to `README.md`
+   - Edit `.claude/settings.json` (if not using Node.js)
+   - Edit [docs/PRD.md](docs/PRD.md) - describe what you're building
 
 3. **Start your first task:**
    ```bash
    ./src/scripts/task.sh start "initial-setup"
    ```
 
-4. **Edit `IMPLEMENTATION_PLAN.md`** with what you want:
-   ```markdown
-   ## Acceptance Criteria
-   - [ ] Users can sign up with email
-   - [ ] Users receive confirmation email
-   - [ ] Users can log in
-   ```
+4. **Tell Claude:**
+   > "I have initialized this repository using the AI Development Template.
+   >
+   > I have run `./src/scripts/task.sh start "project-setup"`.
+   >
+   > Please read **CLAUDE.md** to understand your role and the workflow.
+   > Then, read **docs/PRD.md** and **IMPLEMENTATION_PLAN.md**.
+   >
+   > **My Goal:** I want to build [DESCRIBE YOUR IDEA HERE].
+   >
+   > Please interview me to fill out the missing sections of the PRD, and then help me populate the Technical Specification."
 
-5. **Tell Claude:**
-   > "Please implement this according to the plan in IMPLEMENTATION_PLAN.md"
+5. **Track progress** in `CHECKLIST.md`
 
-6. **Track progress** in `CHECKLIST.md`
-
-7. **When done:**
+6. **When done:**
    ```bash
    ./src/scripts/task.sh finish "initial-setup"
    ```
@@ -347,6 +405,53 @@ Please:
 
 ### The Workflow
 
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Start Task                           │
+│  ./src/scripts/task.sh start "feature-name"                 │
+│  (Creates IMPLEMENTATION_PLAN.md in root)                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Define & Plan (/plan)                    │
+│  • Edit IMPLEMENTATION_PLAN.md with requirements            │
+│  • Claude asks clarifying questions                         │
+│  • Define acceptance criteria                               │
+│  • Get your approval before implementation                  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Implement (/implement)                     │
+│  • Claude follows the plan systematically                   │
+│  • Updates CHECKLIST.md as work progresses                  │
+│  • Documents discoveries in NOTES.md                        │
+│  • Writes tests in /tests/                                  │
+│  • Creates ADRs for architectural decisions                 │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Review (/review)                        │
+│  • Validates against DONE_DEFINITION.md                     │
+│  • Runs full test suite and checks coverage                │
+│  • Verifies documentation is complete                       │
+│  • Checks for anti-patterns                                 │
+│  • Updates IMPLEMENTATION_PLAN.md status                    │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                         Archive                             │
+│  ./src/scripts/task.sh finish "feature-name"                │
+│  • Runs verification script                                 │
+│  • Moves files to ai/TASKS/archive/YYYY-MM-DD-task-name/   │
+│  • Root directory cleared for next task                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Quick Summary:**
 1. **Start task** → Templates copied to root
 2. **Define requirements** → Edit IMPLEMENTATION_PLAN.md
 3. **AI builds** → Follows plan, updates CHECKLIST.md
@@ -446,6 +551,78 @@ Edit files in `.claude/templates/` to match your workflow.
 
 ---
 
+## 🤖 CI/CD Automation
+
+To enforce quality gates automatically, add CI checks to your repository.
+
+### GitHub Actions Setup
+
+Create `.github/workflows/verify-task.yml`:
+
+```yaml
+name: Verify Task Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          # Add your environment setup here
+          # Example: npm install, pip install, etc.
+
+      - name: Run verification script
+        run: ./src/scripts/verify-task.sh
+
+      - name: Run tests
+        run: |
+          # Add your test command here
+          # Example: npm test, pytest, etc.
+
+      - name: Check for anti-patterns
+        run: |
+          # Optional: Add grep/search for known anti-patterns
+          echo "Checking for anti-patterns..."
+```
+
+### What Gets Automated
+
+- **Linting** - Code style validation
+- **Type checking** - TypeScript/static type validation
+- **Tests** - Unit, integration, e2e tests
+- **Coverage** - Minimum coverage thresholds
+- **Verification** - `verify-task.sh` validation
+- **Anti-patterns** - Check for prohibited patterns
+
+### Pre-commit Hooks
+
+Pre-commit hooks are **automatically installed** when you start a new task with `./src/scripts/task.sh start`. This ensures verification runs before every commit.
+
+**Manual installation** (if needed):
+```bash
+cat > .git/hooks/pre-commit << 'EOF'
+#!/bin/bash
+./src/scripts/verify-task.sh
+if [ $? -ne 0 ]; then
+  echo "❌ Verification failed. Fix issues before committing."
+  exit 1
+fi
+EOF
+
+chmod +x .git/hooks/pre-commit
+```
+
+---
+
 ## 📚 Key Documents
 
 | Document | Purpose | Who Writes It |
@@ -493,12 +670,37 @@ This template is based on these principles:
 
 ---
 
+## 📖 Real Examples
+
+See [ai/TASKS/archive/](ai/TASKS/archive/) for completed task examples showing:
+- Full `IMPLEMENTATION_PLAN.md` from start to completion
+- Completed `CHECKLIST.md` with all items checked
+- Exploratory `NOTES.md` documenting discoveries
+- Associated ADRs for architectural decisions made
+
+**New to this template?** Study an archived task to see the complete workflow in action.
+
+---
+
 ## 🚦 Getting Help
 
-1. **Read `CLAUDE.md` first** - explains the entire system
-2. **Check `ai/CONTEXT.md`** - explains document hierarchy
-3. **Look at `.claude/commands/`** - workflow guides
-4. **Open an issue** - we're here to help
+### Quick Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Claude ignores my plan" | Ensure `IMPLEMENTATION_PLAN.md` is in root directory (not nested) |
+| "Claude adds extra features" | Reference [docs/ANTI_PATTERNS.md](docs/ANTI_PATTERNS.md) and say "no scope creep" |
+| "Task feels too heavy" | For trivial fixes (typos, one-liners), skip formal workflow |
+| "Need urgent hotfix" | Archive current task, start "hotfix" task, resume original after |
+| "AI loses context" | Check [.claude/settings.json](.claude/settings.json) priority files |
+
+### Resources
+
+1. **Read [CLAUDE.md](CLAUDE.md) first** - Constitutional rules and complete system explanation
+2. **Check [ai/CONTEXT.md](ai/CONTEXT.md)** - Document hierarchy and reading contract
+3. **Review [.claude/commands/README.md](.claude/commands/README.md)** - Command reference
+4. **Study an archived task** - See [ai/TASKS/archive/](ai/TASKS/archive/) for real examples
+5. **Open an issue** - Report bugs or request features
 
 ---
 
@@ -520,12 +722,19 @@ Refined through real projects, real mistakes, and real lessons learned.
 
 ```bash
 # Task lifecycle
-./src/scripts/task.sh start "task-name"      # Start new task
+./src/scripts/task.sh start "task-name"      # Start new task (auto-installs pre-commit hook)
 ./src/scripts/task.sh finish "task-name"     # Archive completed task
 ./src/scripts/task.sh list                   # Show active/archived tasks
 
-# Verification
+# Verification & Environment
 ./src/scripts/verify-task.sh                 # Verify task completion
+./src/scripts/doctor.sh                      # Check environment health
+
+# AI Commands (use with Claude)
+/plan                                        # Create implementation plan
+/implement                                   # Execute the plan
+/review                                      # Verify completion
+/migrate                                     # Refactor legacy code
 ```
 
 ---

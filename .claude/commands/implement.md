@@ -4,20 +4,24 @@
 Execute the implementation plan for an active task.
 
 ## Prerequisites
-- Task folder exists in `ai/TASKS/active/<date>-<slug>/`
-- `IMPLEMENTATION_PLAN.md` is complete and reviewed
+- `IMPLEMENTATION_PLAN.md` exists in **root directory**
+- Plan is complete and reviewed
 - All required context documents have been read
 
 ## Workflow
 
 ### 1. Load Context
 ```bash
-# Identify active task
-ls ai/TASKS/active/
+# Verify active task exists
+if [ ! -f "IMPLEMENTATION_PLAN.md" ]; then
+    echo "❌ No active task. Run /plan first or use ./src/scripts/task.sh start"
+    exit 1
+fi
 
-# Read task documents
-cat ai/TASKS/active/<date>-<slug>/IMPLEMENTATION_PLAN.md
-cat ai/TASKS/active/<date>-<slug>/CHECKLIST.md
+# Read task documents (all in root directory)
+cat IMPLEMENTATION_PLAN.md
+cat CHECKLIST.md
+cat NOTES.md  # If exists
 ```
 
 ### 2. Pre-Implementation Checks
@@ -34,9 +38,9 @@ cat ai/TASKS/active/<date>-<slug>/CHECKLIST.md
 For each step in the implementation plan:
 
 #### A. Before Making Changes
-- Update `CHECKLIST.md` to mark item as in-progress
-- Document any discoveries in `NOTES.md`
-- If approach differs from plan, update `IMPLEMENTATION_PLAN.md`
+- Update `CHECKLIST.md` (in root) to mark item as in-progress
+- Document any discoveries in `NOTES.md` (in root)
+- If approach differs from plan, update `IMPLEMENTATION_PLAN.md` (in root)
 
 #### B. Make Changes
 - Write code following project conventions
@@ -63,8 +67,8 @@ npm run typecheck
 ```
 
 #### E. Update Checklist
-- Mark completed items in `CHECKLIST.md`
-- Note any blockers or issues in `NOTES.md`
+- Mark completed items in `CHECKLIST.md` (in root)
+- Note any blockers or issues in `NOTES.md` (in root)
 
 ### 4. Continuous Verification
 During implementation:
@@ -86,10 +90,11 @@ touch docs/adr/${PADDED}-<decision-title>.md
 Document the decision using the template in `docs/adr/0001-example-decision.md`.
 
 ### 6. Update Progress
-Keep `IMPLEMENTATION_PLAN.md` current:
+Keep `IMPLEMENTATION_PLAN.md` (in root) current:
 - Mark completed steps
 - Update estimates if scope changes
 - Document deviations from original plan
+- Update status field as you progress
 
 ## Common Pitfalls
 
@@ -111,9 +116,17 @@ Keep `IMPLEMENTATION_PLAN.md` current:
 ## Outputs
 - Working, tested code
 - Updated tests in `/tests/`
-- Updated `CHECKLIST.md` with progress
-- Updated `NOTES.md` with discoveries
+- Updated `CHECKLIST.md` (in root) with progress
+- Updated `NOTES.md` (in root) with discoveries
+- Updated `IMPLEMENTATION_PLAN.md` (in root) reflecting current state
 - ADRs for any architectural decisions
 
 ## Next Step
-Run `/review` command to verify completion before marking task done.
+Run `/review` command to verify completion before archiving task.
+
+---
+
+**Important:**
+- All task files stay in **root directory** during active work
+- Files move to `ai/TASKS/archive/` only when task is complete
+- Use `./src/scripts/task.sh finish "task-name"` to archive

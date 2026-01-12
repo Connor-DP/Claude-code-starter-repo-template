@@ -9,12 +9,18 @@
     ],
     "ignoredPaths": [
       "node_modules/**",
+      "venv/**",
+      "target/**",
       "dist/**",
       "build/**",
       "coverage/**",
       ".cache/**",
       "*.log",
       "*.tmp",
+      "*.lock",
+      "package-lock.json",
+      "yarn.lock",
+      "Cargo.lock",
       "ai/TASKS/archive/**"
     ]
   },
@@ -23,6 +29,19 @@
     "runtime": "Node.js",
     "packageManager": "npm",
     "testFramework": "Jest"
+  },
+  "commands": {
+    "test": "npm test",
+    "lint": "npm run lint",
+    "typecheck": "npm run typecheck",
+    "build": "npm run build",
+    "format": "npm run format:check"
+  },
+  "verification": {
+    "requiredCoverage": null,
+    "blockOnTodo": false,
+    "blockOnConsole": true,
+    "srcDir": "src"
   },
   "hints": {
     "alwaysReadFirst": [
@@ -53,5 +72,44 @@
   },
   "tokenOptimization": {
     "note": "Priority files are sent on every turn. Other docs should be read once at task start and kept in conversation history."
+  },
+  "examples": {
+    "note": "Example configurations for different stacks",
+    "python": {
+      "commands": {
+        "test": "pytest",
+        "lint": "flake8 .",
+        "typecheck": "mypy .",
+        "build": "python -m build",
+        "format": "black --check ."
+      },
+      "verification": {
+        "srcDir": "src"
+      }
+    },
+    "go": {
+      "commands": {
+        "test": "go test ./...",
+        "lint": "golangci-lint run",
+        "typecheck": "go vet ./...",
+        "build": "go build ./...",
+        "format": "gofmt -l ."
+      },
+      "verification": {
+        "srcDir": "."
+      }
+    },
+    "rust": {
+      "commands": {
+        "test": "cargo test",
+        "lint": "cargo clippy",
+        "typecheck": "cargo check",
+        "build": "cargo build",
+        "format": "cargo fmt -- --check"
+      },
+      "verification": {
+        "srcDir": "src"
+      }
+    }
   }
 }
