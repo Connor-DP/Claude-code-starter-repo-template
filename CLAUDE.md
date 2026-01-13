@@ -47,7 +47,47 @@ See [.claude/commands/README.md](./.claude/commands/README.md) for details.
 
 ## Workflow
 
-### 1. Active State (Root Directory)
+**Important**: The formal workflow below is designed for **non-trivial features and changes**. For trivial fixes (typos, one-liners, formatting), see **Lite Mode** below.
+
+### Lite Mode (For Trivial Changes)
+
+**When to use Lite Mode:**
+- Fixing typos or documentation errors
+- Formatting fixes (indentation, whitespace)
+- Simple one-line bug fixes
+- Renaming variables for clarity
+- Adding missing semicolons, imports, or simple syntax fixes
+- Changes that take < 10 minutes and touch < 3 files
+
+**Rule of thumb:** If the change is obvious, requires no architectural decisions, and can be verified in under 10 minutes, skip the formal workflow.
+
+**Lite Mode Process:**
+1. Make the change directly (no IMPLEMENTATION_PLAN.md needed)
+2. Run relevant tests (`npm test` or equivalent)
+3. Run linting/formatting checks if applicable
+4. Commit with clear, descriptive message
+5. Move on
+
+**Example commit messages for Lite Mode:**
+```
+Fix typo in README.md authentication section
+Update indentation in user.service.ts to match style guide
+Add missing import for validateEmail function
+```
+
+**When NOT to use Lite Mode:**
+- Changes affecting multiple components or files
+- Anything requiring architectural decisions
+- New features (even small ones)
+- Refactoring that changes logic
+- Database schema changes
+- API contract changes
+
+**If in doubt, use the formal workflow.** Lite Mode is an exception for obvious fixes, not the default.
+
+---
+
+### 1. Active State (Root Directory) - Formal Workflow
 
 The following files in the **root directory** represent the CURRENT active task:
 - **`IMPLEMENTATION_PLAN.md`**: The authoritative source of truth for what you're doing

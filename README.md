@@ -101,6 +101,8 @@ You CAN use this template without the full workflow for:
 
 **Rule of thumb:** If the task takes < 10 minutes and touches < 3 files, skip the formal process.
 
+See **[CLAUDE.md](CLAUDE.md) → Lite Mode** for the complete workflow exception rules.
+
 ---
 
 ## ✅ Who This Template IS For

@@ -253,6 +253,8 @@ Make sure `IMPLEMENTATION_PLAN.md` is in the **root directory**, not nested in a
 ### "I want to skip the formal workflow for quick fixes"
 That's fine! The workflow is for non-trivial features. For typos or one-liners, just edit and commit.
 
+This is called **"Lite Mode"** in the system - see [CLAUDE.md](CLAUDE.md) → Workflow → Lite Mode for details.
+
 ### "How do I work on multiple features?"
 You don't - not simultaneously. Finish one task, archive it, then start the next. This prevents context mixing.
 
