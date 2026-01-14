@@ -143,27 +143,46 @@ SRC_DIR=$(get_setting ".verification.srcDir" "src")
 BLOCK_TODO=$(get_setting ".verification.blockOnTodo" "false")
 BLOCK_CONSOLE=$(get_setting ".verification.blockOnConsole" "true")
 
+# Check if this is a Node.js project with package.json
+HAS_PACKAGE_JSON=false
+if [ -f "$ROOT_DIR/package.json" ]; then
+    HAS_PACKAGE_JSON=true
+fi
+
 # 1. Code Quality Checks
 echo -e "${BLUE}1. Code Quality Checks${NC}"
 echo "----------------------"
 
 # Linting
 if [ "$LINT_CMD" != "null" ] && [ ! -z "$LINT_CMD" ]; then
-    run_check "Linting" "$LINT_CMD"
+    # Skip npm commands if no package.json exists
+    if [[ "$LINT_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
+        echo -e "${YELLOW}⊘${NC} Linting skipped (no package.json found)"
+    else
+        run_check "Linting" "$LINT_CMD"
+    fi
 else
     echo -e "${YELLOW}⊘${NC} No lint command configured"
 fi
 
 # Type Checking
 if [ "$TYPE_CMD" != "null" ] && [ ! -z "$TYPE_CMD" ]; then
-    run_check "Type checking" "$TYPE_CMD"
+    if [[ "$TYPE_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
+        echo -e "${YELLOW}⊘${NC} Type checking skipped (no package.json found)"
+    else
+        run_check "Type checking" "$TYPE_CMD"
+    fi
 else
     echo -e "${YELLOW}⊘${NC} No typecheck command configured"
 fi
 
 # Formatting
 if [ "$FORMAT_CMD" != "null" ] && [ ! -z "$FORMAT_CMD" ]; then
-    run_check "Code formatting" "$FORMAT_CMD"
+    if [[ "$FORMAT_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
+        echo -e "${YELLOW}⊘${NC} Code formatting skipped (no package.json found)"
+    else
+        run_check "Code formatting" "$FORMAT_CMD"
+    fi
 else
     echo -e "${YELLOW}⊘${NC} No format check command configured"
 fi
@@ -175,7 +194,11 @@ echo -e "${BLUE}2. Testing${NC}"
 echo "----------"
 
 if [ "$TEST_CMD" != "null" ] && [ ! -z "$TEST_CMD" ]; then
-    run_check "All tests" "$TEST_CMD"
+    if [[ "$TEST_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
+        echo -e "${YELLOW}⊘${NC} Tests skipped (no package.json found)"
+    else
+        run_check "All tests" "$TEST_CMD"
+    fi
 else
     echo -e "${YELLOW}⊘${NC} No test command configured"
 fi
@@ -187,7 +210,11 @@ echo -e "${BLUE}3. Build Validation${NC}"
 echo "-------------------"
 
 if [ "$BUILD_CMD" != "null" ] && [ ! -z "$BUILD_CMD" ]; then
-    run_check "Build" "$BUILD_CMD"
+    if [[ "$BUILD_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
+        echo -e "${YELLOW}⊘${NC} Build skipped (no package.json found)"
+    else
+        run_check "Build" "$BUILD_CMD"
+    fi
 else
     echo -e "${YELLOW}⊘${NC} No build command configured"
 fi
