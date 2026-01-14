@@ -22,19 +22,19 @@ echo -e "${BLUE}🏥 Running environment diagnostics...${NC}\n"
 # Helper functions
 check_pass() {
     echo -e "${GREEN}✓${NC} $1"
-    ((CHECKS++))
+    CHECKS=$((CHECKS + 1))
 }
 
 check_fail() {
     echo -e "${RED}✗${NC} $1"
-    ((ERRORS++))
-    ((CHECKS++))
+    ERRORS=$((ERRORS + 1))
+    CHECKS=$((CHECKS + 1))
 }
 
 check_warn() {
     echo -e "${YELLOW}⚠${NC} $1"
-    ((WARNINGS++))
-    ((CHECKS++))
+    WARNINGS=$((WARNINGS + 1))
+    CHECKS=$((CHECKS + 1))
 }
 
 # 1. Check Git
