@@ -21,31 +21,31 @@ jobs:
           node-version: '18'
           cache: 'npm'
         # Only if package.json exists
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
 
       - name: Install dependencies
         run: npm ci
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
 
       - name: Run linter
         run: npm run lint
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: false
 
       - name: Run type checking
         run: npm run type-check
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: false
 
       - name: Run tests
         run: npm test
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         env:
           CI: true
 
       - name: Check test coverage
         run: npm run test:coverage
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Run task verification script
@@ -188,7 +188,7 @@ jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
-    if: hashFiles('package.json') != ''
+    if: ${{ hashFiles('package.json') != '' }}
 
     steps:
       - name: Checkout code
