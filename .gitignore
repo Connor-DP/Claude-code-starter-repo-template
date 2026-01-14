@@ -60,15 +60,4 @@ tmp/
 temp/
 *.log
 
-# AI Active State (CRITICAL: Do not commit these to template)
-# These files are generated when users start tasks
-IMPLEMENTATION_PLAN.md
-CHECKLIST.md
-NOTES.md
 
-# Package lock files (users should generate their own)
-package-lock.json
-yarn.lock
-Pipfile.lock
-poetry.lock
-Cargo.lock
