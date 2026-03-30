@@ -1,6 +1,6 @@
 # Command: /migrate
 
-**Purpose:** Refactor legacy code to match current architectural standards and patterns.
+**Purpose:** Refactor legacy code to match current architectural standards and patterns, using agents for assessment, implementation, and verification.
 
 ---
 
@@ -22,22 +22,21 @@ Use `/migrate` when you need to:
 
 ## Workflow
 
-### Phase 1: Assessment
+### Phase 1: Assessment (Use Agents)
 
-1. **Identify the legacy code:**
-   - Which files/modules need migration?
-   - What patterns are they currently using?
-   - Why do they need to change?
+**Spawn `@scout`** to map the legacy code:
+- Which files/modules need migration?
+- What patterns are they currently using?
+- What anti-patterns exist?
 
-2. **Review current standards:**
-   - Read [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) - What patterns should be used?
-   - Read [docs/ANTI_PATTERNS.md](../../docs/ANTI_PATTERNS.md) - What must be avoided?
-   - Check [docs/adr/](../../docs/adr/) - What decisions have been made?
+**Spawn `@architect`** to evaluate the gap:
+- What should the target architecture look like?
+- What's the migration order (dependencies, risk)?
+- Are there ADRs that inform the migration?
 
-3. **Document the gap:**
-   - What anti-patterns exist in the legacy code?
-   - What architectural principles are violated?
-   - What quality standards are not met?
+**Spawn `@security-auditor`** for security baseline:
+- What vulnerabilities exist in the legacy code?
+- Security issues should be migrated first
 
 ### Phase 2: Planning
 
@@ -74,56 +73,41 @@ Use `/migrate` when you need to:
    - [ ] No functionality lost
    - [ ] Performance maintained or improved
 
-### Phase 3: Execution
+### Phase 3: Execution (Use Agents)
 
 1. **Create safety net:**
-   - Ensure comprehensive tests exist BEFORE refactoring
-   - If tests don't exist, write them first
+   - Use `@qa` to assess existing test coverage
+   - If tests don't exist, write them BEFORE refactoring
    - Document current behavior
 
-2. **Migrate incrementally:**
-   - Don't refactor everything at once
-   - Make small, testable changes
-   - Run tests after each change
-   - Commit frequently with clear messages
+2. **Use `@implementer` for the migration:**
+   - Runs in a git worktree — safe to experiment
+   - Give it one module/file at a time
+   - It can use `@scout` internally for pattern questions
 
 3. **Follow the refactoring order:**
-   - **Security issues first** - Fix vulnerabilities immediately
-   - **Anti-patterns next** - Remove prohibited patterns
-   - **Architecture alignment** - Match current patterns
-   - **Code quality** - Improve readability, maintainability
-   - **Optimization** - Performance improvements (if needed)
+   - **Security issues first** — fix vulnerabilities immediately
+   - **Anti-patterns next** — remove prohibited patterns
+   - **Architecture alignment** — match current patterns
+   - **Code quality** — improve readability, maintainability
+   - **Optimization** — performance improvements (if needed)
 
 4. **Update documentation:**
-   - If migration reveals new patterns, document in ARCHITECTURE.md
-   - If you make architectural decisions, create ADR
-   - Update inline comments if complex logic changed
+   - Use `@doc-writer` to create ADRs for significant changes
+   - Update ARCHITECTURE.md if migration reveals new patterns
 
-### Phase 4: Verification
+### Phase 4: Verification (Parallel Agents)
 
-1. **Run comprehensive checks:**
-   ```bash
-   # Run full test suite
-   npm test  # or pytest, cargo test, etc.
+Run the standard `/review` quality gate — three agents in parallel:
 
-   # Check for anti-patterns
-   grep -r "console\.log" src/
-   # (Check all patterns from ANTI_PATTERNS.md)
+- **`@reviewer`** — verify scope, quality, and completion
+- **`@qa`** — verify no functionality was lost, run test suite
+- **`@security-auditor`** — verify security issues were actually fixed
 
-   # Run verification script
-   ./src/scripts/verify-task.sh
-   ```
-
-2. **Compare before/after:**
-   - Functionality identical?
-   - Performance acceptable?
-   - Tests all passing?
-   - Documentation updated?
-
-3. **Create ADR if significant change:**
-   - Document why migration was needed
-   - What patterns were changed
-   - What benefits were gained
+Additionally, compare before/after:
+- Functionality identical?
+- Performance acceptable?
+- All anti-patterns removed?
 
 ---
 
