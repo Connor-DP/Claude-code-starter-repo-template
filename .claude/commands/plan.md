@@ -1,7 +1,7 @@
 # Plan Command
 
 ## Purpose
-Create a comprehensive implementation plan for a new task.
+Create a comprehensive implementation plan for a new task, using the `architect` agent for design work.
 
 ## Workflow
 
@@ -9,7 +9,7 @@ Create a comprehensive implementation plan for a new task.
 ```bash
 # Ensure no task is currently active
 if [ -f "IMPLEMENTATION_PLAN.md" ]; then
-    echo "⚠️  Task already active. Finish current task first."
+    echo "Task already active. Finish current task first."
     exit 1
 fi
 ```
@@ -22,7 +22,20 @@ fi
 - Review relevant `/docs/` files (PRD, TECH_SPEC, ARCHITECTURE, APP_FLOW)
 - Check [docs/ANTI_PATTERNS.md](../../docs/ANTI_PATTERNS.md) for constraints
 
-### 3. Start New Task
+### 3. Use Agents for Design
+
+**Spawn `@scout` first** to understand the current codebase:
+- What existing patterns are relevant?
+- What files will likely need to change?
+- Are there similar features already implemented?
+
+**Spawn `@architect` for the design phase:**
+- Evaluate approaches and trade-offs
+- Design data models, API contracts, module boundaries
+- Produce an ADR draft if the decision is architecturally significant
+- Output a structured implementation plan
+
+### 4. Start New Task
 Use the task management script:
 ```bash
 ./src/scripts/task.sh start "descriptive-task-name"
@@ -35,8 +48,8 @@ This creates three files in the **root directory**:
 
 **Note:** The script automatically installs a pre-commit hook if in a git repository.
 
-### 4. Fill in Implementation Plan
-Edit `IMPLEMENTATION_PLAN.md` in the root directory:
+### 5. Fill in Implementation Plan
+Using the architect's output, populate `IMPLEMENTATION_PLAN.md` in the root directory:
 
 ```markdown
 # Implementation Plan: [Task Title]
@@ -47,10 +60,10 @@ Edit `IMPLEMENTATION_PLAN.md` in the root directory:
 ---
 
 ## Objective
-Clear, concise statement of what needs to be achieved.
+[What needs to be achieved — 1-2 sentences]
 
 ## Context
-Why is this needed? What problem does it solve?
+[Why this is needed — link to PRD/issue if applicable]
 
 **Related Documents:**
 - [docs/PRD.md](docs/PRD.md) - Section X
@@ -68,6 +81,7 @@ Why is this needed? What problem does it solve?
 ---
 
 ## Implementation Approach
+[Architect's recommended approach]
 
 ### High-Level Strategy
 Describe the overall approach in 2-3 sentences.
@@ -82,9 +96,12 @@ Describe the overall approach in 2-3 sentences.
 ...
 
 ### Files to Modify/Create
-- `path/to/file1.ts` - What changes
-- `path/to/file2.ts` - What changes
-- `tests/test-file.test.ts` - New tests
+- `path/to/file.ts` — [what changes]
+
+---
+
+## Architectural Decisions
+[ADR drafts from architect, if any]
 
 ---
 
@@ -110,19 +127,12 @@ Describe the overall approach in 2-3 sentences.
 
 ---
 
-## Architectural Decisions
-List any decisions that may need ADRs:
-- Decision 1: Rationale
-- Decision 2: Rationale
-
----
-
-## Success Metrics
-- How will we know this is complete?
-- What metrics matter?
+## Definition of Done
+- [ ] All acceptance criteria met
+- [ ] `src/scripts/verify-task.sh` passes
 ```
 
-### 5. Verify Plan Quality
+### 6. Verify Plan Quality
 Before proceeding, check:
 - [ ] Does it avoid patterns in [docs/ANTI_PATTERNS.md](../../docs/ANTI_PATTERNS.md)?
 - [ ] Does it satisfy [ai/DEFINITIONS/DONE_DEFINITION.md](../../ai/DEFINITIONS/DONE_DEFINITION.md)?
@@ -131,22 +141,14 @@ Before proceeding, check:
 - [ ] Are acceptance criteria specific and testable?
 - [ ] Is the testing strategy comprehensive?
 
-### 6. Get Approval (If Working with Others)
-- Review plan with Product Owner
-- Get technical review from team
-- Confirm scope and approach
-- Adjust based on feedback
-
 ## Outputs
-After running this command, you should have:
-- `IMPLEMENTATION_PLAN.md` in **root directory** (filled in)
+- `IMPLEMENTATION_PLAN.md` in **root directory** (filled in with architect's design)
 - `CHECKLIST.md` in **root directory** (ready to use)
-- `NOTES.md` in **root directory** (for scratchpad)
-- Clear understanding of the task
-- Approval to proceed
+- `NOTES.md` in **root directory** (scratchpad)
+- Ready to run `/implement`
 
 ## Next Step
-Run `/implement` command to begin systematic execution of the plan.
+Run `/implement` to begin building.
 
 ---
 

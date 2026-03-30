@@ -1,10 +1,10 @@
 # Implement Command
 
 ## Purpose
-Execute the implementation plan for an active task.
+Execute the implementation plan using agents for coding, exploration, and quality checks.
 
 ## Prerequisites
-- `IMPLEMENTATION_PLAN.md` exists in **root directory**
+- `IMPLEMENTATION_PLAN.md` exists in **root directory** (run `/plan` first)
 - Plan is complete and reviewed
 - All required context documents have been read
 
@@ -14,7 +14,7 @@ Execute the implementation plan for an active task.
 ```bash
 # Verify active task exists
 if [ ! -f "IMPLEMENTATION_PLAN.md" ]; then
-    echo "❌ No active task. Run /plan first or use ./src/scripts/task.sh start"
+    echo "No active task. Run /plan first or use ./src/scripts/task.sh start"
     exit 1
 fi
 
@@ -24,21 +24,33 @@ cat CHECKLIST.md
 cat NOTES.md  # If exists
 ```
 
-### 2. Pre-Implementation Checks
-- [ ] Read `docs/ANTI_PATTERNS.md` - avoid prohibited patterns
-- [ ] Check `tests/README.md` - understand test conventions
-- [ ] Review `docs/ARCHITECTURE.md` - follow established patterns
-- [ ] Consult `.claude/agents/` if specialized expertise needed:
-  - `ARCHITECT.md` for design questions
-  - `QA_ENGINEER.md` for testing strategy
-  - `TECH_LEAD.md` for code review concerns
+### 2. Use Agents Strategically
+
+**`@scout`** — Use liberally throughout implementation:
+- Find existing patterns before writing new code
+- Locate utilities, helpers, and shared code
+- Understand how similar features are structured
+- Cheap and fast (runs on Haiku) — don't hesitate to use it
+
+**`@implementer`** — For substantial coding tasks:
+- Runs in an isolated git worktree — safe parallel development
+- Give it a specific step from the implementation plan
+- It writes code AND tests together
+- Can spawn `@scout` internally for codebase questions
+- Review its worktree output before merging
+
+**`@architect`** — When you hit a design question:
+- Unexpected complexity or trade-off during implementation
+- Need to evaluate a different approach than planned
+- Update `IMPLEMENTATION_PLAN.md` with any design changes
 
 ### 3. Implementation Loop
 
-For each step in the implementation plan:
+For each step in the plan:
 
 #### A. Before Making Changes
 - Update `CHECKLIST.md` (in root) to mark item as in-progress
+- Use `@scout` to find relevant existing code
 - Document any discoveries in `NOTES.md` (in root)
 - If approach differs from plan, update `IMPLEMENTATION_PLAN.md` (in root)
 
@@ -48,70 +60,51 @@ For each step in the implementation plan:
 - Avoid over-engineering (see CLAUDE.md principles)
 - Keep changes focused and atomic
 
-#### C. Write Tests
-- Check `/tests/` for test structure
-- Follow existing test patterns
+#### C. Write Tests Alongside Code
+- Follow patterns in `/tests/`
 - Test behavior, not implementation
 - Use Arrange-Act-Assert pattern
+- Cover edge cases and error conditions
 
-#### D. Verify Changes
+#### D. Verify After Each Step
 ```bash
-# Run tests
-npm test  # or project-specific command
-
-# Run linters
-npm run lint
-
-# Type check (if applicable)
-npm run typecheck
+npm test 2>/dev/null || pytest 2>/dev/null || go test ./... 2>/dev/null || cargo test 2>/dev/null
+npm run lint 2>/dev/null
+npm run typecheck 2>/dev/null
 ```
 
-#### E. Update Checklist
+#### E. Update Progress
 - Mark completed items in `CHECKLIST.md` (in root)
 - Note any blockers or issues in `NOTES.md` (in root)
-
-### 4. Continuous Verification
-During implementation:
-- Run tests frequently
-- Check for security vulnerabilities (OWASP top 10)
-- Ensure no accidental secrets committed
-- Verify changes against acceptance criteria
-
-### 5. Handle Architectural Decisions
-If you make a significant architectural decision:
-
-```bash
-# Create new ADR
-NEXT_NUM=$(ls docs/adr/ | grep -E '^[0-9]+' | sort -n | tail -1 | sed 's/^0*//' | awk '{print $1+1}')
-PADDED=$(printf "%04d" $NEXT_NUM)
-touch docs/adr/${PADDED}-<decision-title>.md
-```
-
-Document the decision using the template in `docs/adr/0001-example-decision.md`.
-
-### 6. Update Progress
-Keep `IMPLEMENTATION_PLAN.md` (in root) current:
-- Mark completed steps
-- Update estimates if scope changes
-- Document deviations from original plan
+- Update `IMPLEMENTATION_PLAN.md` if approach changed
 - Update status field as you progress
+
+### 4. Handle Architectural Decisions
+If you make a significant design decision during implementation:
+- Use `@architect` to evaluate the trade-offs
+- Use `@doc-writer` to draft the ADR
+- Document using the template in `docs/adr/0001-example-decision.md`
+
+### 5. Mid-Implementation Quality Check
+Halfway through (or at natural breakpoints), run a quick check:
+- Use `@qa` to review what's built so far
+- Fix any issues before they compound
 
 ## Common Pitfalls
 
 **DON'T:**
 - Skip tests ("I'll add them later")
 - Introduce patterns from `docs/ANTI_PATTERNS.md`
-- Make changes beyond the task scope
+- Make changes beyond task scope
 - Commit commented-out code or TODOs
-- Add unnecessary abstractions
-- Work on multiple tasks simultaneously
+- Guess at codebase patterns — use `@scout`
 
 **DO:**
-- Keep changes minimal and focused
+- Use `@scout` before writing anything new
+- Test after every logical change
 - Write self-documenting code
-- Test edge cases
-- Update documentation as you go
-- Ask for clarification if requirements are unclear
+- Update checklist as you go
+- Keep the implementation plan current
 
 ## Outputs
 - Working, tested code
@@ -119,10 +112,10 @@ Keep `IMPLEMENTATION_PLAN.md` (in root) current:
 - Updated `CHECKLIST.md` (in root) with progress
 - Updated `NOTES.md` (in root) with discoveries
 - Updated `IMPLEMENTATION_PLAN.md` (in root) reflecting current state
-- ADRs for any architectural decisions
+- ADRs for any architectural decisions (via `@doc-writer`)
 
 ## Next Step
-Run `/review` command to verify completion before archiving task.
+Run `/review` to verify completion.
 
 ---
 

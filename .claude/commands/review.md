@@ -1,148 +1,82 @@
 # Review Command
 
 ## Purpose
-Verify task completion and ensure all quality criteria are met before marking done.
+Verify task completion using specialized agents for code review, QA, and security audit — run in parallel for speed.
 
 ## When to Run
 - After implementation is complete
 - Before marking task as done
-- Before archiving the task
 - Before creating a pull request
 
 ## Workflow
 
 ### 1. Automated Verification
-
 ```bash
-# Run verification script
 src/scripts/verify-task.sh
-
-# Run full test suite
-npm test  # or project-specific command
-
-# Check test coverage
-npm test -- --coverage
-
-# Run linters
-npm run lint
-
-# Type checking (if applicable)
-npm run typecheck
-
-# Check for security issues
-npm audit  # or equivalent
 ```
 
-### 2. Manual Review Checklist
+### 2. Spawn Review Agents in Parallel
 
-Consult `ai/DEFINITIONS/REVIEW_GUIDE.md` and verify:
+Run these three agents simultaneously — they are independent and read-only:
 
-#### Functionality
-- [ ] All acceptance criteria met (check `IMPLEMENTATION_PLAN.md`)
-- [ ] Feature works as specified
-- [ ] Edge cases handled correctly
-- [ ] Error handling is appropriate
-- [ ] No regressions introduced
+**`@reviewer`** — Code quality and scope discipline:
+- Reviews the git diff for all task changes
+- Checks against `DONE_DEFINITION.md` criteria
+- Verifies scope discipline (no creep)
+- Runs `verify-task.sh`
+- Returns: Approve / Request Changes / Block
 
-#### Code Quality
-- [ ] Code is clear and self-documenting
-- [ ] No unnecessary complexity
-- [ ] Follows established patterns in codebase
-- [ ] No patterns from `docs/ANTI_PATTERNS.md`
-- [ ] No commented-out code
-- [ ] No hardcoded values that should be configurable
-- [ ] No exposed secrets or credentials
+**`@qa`** — Testing and bug finding:
+- Reviews test coverage and quality
+- Runs the full test suite
+- Attempts to find bugs and edge cases
+- Checks error handling
+- Returns: QA Report with bugs and missing coverage
 
-#### Testing
-- [ ] Tests are comprehensive
-- [ ] Tests follow Arrange-Act-Assert pattern
-- [ ] Test names are descriptive
-- [ ] Tests are in `/tests/` or project convention
-- [ ] All tests passing
-- [ ] Coverage meets `ai/DEFINITIONS/QUALITY_BAR.md` standards
+**`@security-auditor`** — Security scan:
+- Scans for OWASP top 10 vulnerabilities
+- Checks for exposed secrets and credentials
+- Runs dependency audit
+- Reviews auth/authz implementation
+- Returns: Security Audit Report
 
-#### Documentation
-- [ ] README updated if user-facing changes
-- [ ] API documentation updated if applicable
-- [ ] Comments added where logic isn't obvious
-- [ ] ADRs created for architectural decisions
-- [ ] `IMPLEMENTATION_PLAN.md` reflects actual implementation
+### 3. Evaluate Results
 
-#### Security
-- [ ] No SQL injection vulnerabilities
-- [ ] No XSS vulnerabilities
-- [ ] No command injection vulnerabilities
-- [ ] User input is validated
-- [ ] Authentication/authorization checked
-- [ ] No OWASP top 10 vulnerabilities
+Collect all three agent reports and evaluate:
 
-### 3. Completion Criteria Check
+| Agent | Verdict | Action |
+|-------|---------|--------|
+| `reviewer` | APPROVE | Continue |
+| `reviewer` | REQUEST CHANGES | Fix issues, re-run `/review` |
+| `reviewer` | BLOCK | Stop — critical issues |
+| `qa` | PASS | Continue |
+| `qa` | FAIL | Fix bugs, re-run `/review` |
+| `security-auditor` | PASS | Continue |
+| `security-auditor` | FAIL | Fix vulnerabilities immediately |
 
-Verify against `ai/DEFINITIONS/DONE_DEFINITION.md`:
-- [ ] All DONE_DEFINITION criteria satisfied
-- [ ] All task-specific criteria satisfied
-- [ ] `CHECKLIST.md` items all checked
-- [ ] Verification script passes
+### 4. Documentation Check
+If any architectural decisions were made during implementation:
+- Use `@doc-writer` to create ADRs
+- Verify `IMPLEMENTATION_PLAN.md` reflects what was actually built
 
-### 4. Peer Review Simulation
-
-Ask yourself:
-- Would this be approved in a code review?
-- Is the code maintainable by others?
-- Are there any unclear parts?
-- Would this confuse a new team member?
-
-### 5. Consult Agent Personas
-
-If needed, review with specialized perspectives:
-
-**TECH_LEAD.md**: Code quality and maintainability
-```markdown
-- Is the code production-ready?
-- Are there any tech debt concerns?
-- Does it follow team conventions?
-```
-
-**QA_ENGINEER.md**: Testing and quality
-```markdown
-- Is test coverage adequate?
-- Are edge cases tested?
-- Are there any quality concerns?
-```
-
-**ARCHITECT.md**: Design and architecture
-```markdown
-- Does it fit the system architecture?
-- Are there scalability concerns?
-- Is this the right approach?
-```
-
-### 6. Create ADRs if Needed
-
-If you made architectural decisions during implementation:
-- [ ] Create numbered ADR in `docs/adr/`
-- [ ] Update `docs/adr/README.md` index
-- [ ] Document context, decision, and consequences
-
-### 7. Final Verification
-
+### 5. Final Verification
 ```bash
 # One more full verification
 src/scripts/verify-task.sh
 
-# Ensure git status is clean (no uncommitted changes)
+# Check git status
 git status
 
-# Review what's about to be committed
+# Review the full diff
 git diff --staged
 ```
 
 ## Decision Tree
 
-### If Everything Passes
-✅ **Proceed to completion:**
-1. Update `IMPLEMENTATION_PLAN.md` (in root) - mark status as READY_FOR_REVIEW or DONE
-2. Archive the task using script: `./src/scripts/task.sh finish "task-name"`
+### All Agents Pass
+Proceed to completion:
+1. Update `IMPLEMENTATION_PLAN.md` (in root) - mark status as DONE
+2. Archive the task: `./src/scripts/task.sh finish "task-name"`
 3. Commit changes (if requested)
 4. Create PR (if requested)
 
@@ -151,16 +85,16 @@ git diff --staged
 - Moves files from root to `ai/TASKS/archive/YYYY-MM-DD-task-name/`
 - Clears root directory for next task
 
-### If Issues Found
-❌ **Return to implementation:**
-1. Document issues in `NOTES.md` (in root)
+### Issues Found
+Return to implementation:
+1. Collect all issues from agent reports into `NOTES.md` (in root)
 2. Update `CHECKLIST.md` (in root) to reflect remaining work
 3. Update `IMPLEMENTATION_PLAN.md` (in root) status to IN_PROGRESS
 4. Fix issues
-5. Return to step 1 (Automated Verification)
+5. Re-run `/review`
 
-### If Blocked
-🚫 **Need help:**
+### Blocked
+Escalate to user:
 1. Document blocker in `NOTES.md` (in root)
 2. Update `IMPLEMENTATION_PLAN.md` (in root) with blocker info and status BLOCKED
 3. Ask user for guidance
@@ -179,11 +113,6 @@ git diff --staged
 - Check `.eslintrc` for project rules
 - Don't disable linting to pass - fix the issue
 
-### Coverage Below Threshold
-- Add missing test cases
-- Test edge cases
-- Verify coverage config in `tests/README.md`
-
 ### Security Issues
 - Never ignore security warnings
 - Update vulnerable dependencies
@@ -191,17 +120,16 @@ git diff --staged
 - Document mitigation in ADR if needed
 
 ## Outputs
-- All checks passing
-- Task ready to archive
-- Confidence in production-readiness
-- Clear documentation of what was built
-- `IMPLEMENTATION_PLAN.md` (in root) status updated to READY_FOR_REVIEW or DONE
+- Three independent agent reports (reviewer, QA, security)
+- Clear pass/fail verdict
+- Actionable issues list if failed
+- Confidence in production-readiness if passed
+- ADRs created via `@doc-writer` if needed
 
 ## Next Steps
-1. Run `./src/scripts/task.sh finish "task-name"` to archive (moves files from root to archive/)
+1. Archive completed task: `./src/scripts/task.sh finish "task-name"`
 2. Commit changes (if user requests)
 3. Create pull request (if user requests)
-4. Begin next task with `./src/scripts/task.sh start "next-task-name"`
 
 ---
 

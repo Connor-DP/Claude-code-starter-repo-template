@@ -191,10 +191,11 @@ The following files in the **root directory** represent the CURRENT active task:
 - Follow the active task in **root** `IMPLEMENTATION_PLAN.md`
 - Update `CHECKLIST.md` as you complete items
 - Document discoveries in `NOTES.md` (exploratory only, NOT requirements)
-- Consult agent personas in .claude/agents/ when needed:
-  - ARCHITECT.md for system design questions
-  - QA_ENGINEER.md for testing strategy
-  - TECH_LEAD.md for code review concerns
+- Use subagents for specialized tasks:
+  - `@scout` to find existing patterns and code (fast, use liberally)
+  - `@architect` for system design questions
+  - `@qa` for testing strategy
+  - `@reviewer` for code review concerns
 - Check docs/ANTI_PATTERNS.md before making architectural decisions
 - Write tests in /tests/ (or project-specific location)
 - Update `IMPLEMENTATION_PLAN.md` if approach deviates from original plan
@@ -250,12 +251,36 @@ mv IMPLEMENTATION_PLAN.md CHECKLIST.md NOTES.md ai/TASKS/archive/$(date +%Y-%m-%
 - **Always** check tests/README.md before creating tests
 - **Always** use `./src/scripts/task.sh` for task lifecycle when possible
 
-## Agent Personas
+## Subagents
 
-Invoke specific personas from `/.claude/agents/` when needed:
-- `ARCHITECT.md` - For system design and planning
-- `QA_ENGINEER.md` - For testing strategy and validation
-- `TECH_LEAD.md` - For code review and quality checks
+This project uses Claude Code subagents — specialized agents with restricted tools, persistent memory, and defined roles. Invoke them with `@agent-name` or let Claude delegate automatically.
+
+### Available Agents
+
+| Agent | Role | Tools | Model | Key Feature |
+|-------|------|-------|-------|-------------|
+| `@scout` | Fast codebase search | Read, Grep, Glob | Haiku | Cheap & fast — use liberally |
+| `@architect` | System design & planning | Read-only + Web | Inherit | Project memory for decisions |
+| `@implementer` | Code writing & testing | Full + Agent(scout) | Inherit | Git worktree isolation |
+| `@reviewer` | Code review & scope check | Read-only + Bash | Inherit | Cannot modify code |
+| `@qa` | Testing & bug finding | Read-only + Bash | Inherit | Cannot modify code |
+| `@security-auditor` | Security scanning | Read-only + Bash | Inherit | OWASP + secret scanning |
+| `@doc-writer` | Documentation & ADRs | Read + Write + Edit | Sonnet | Cannot run commands |
+
+### When to Use Each Agent
+
+- **Before writing code**: `@scout` to find patterns, `@architect` for design questions
+- **During implementation**: `@implementer` for isolated coding, `@scout` for codebase questions
+- **After implementation**: `@reviewer` + `@qa` + `@security-auditor` in parallel for comprehensive review
+- **For documentation**: `@doc-writer` for ADRs, README updates, tech spec changes
+
+### Agent Design Principles
+
+1. **Tool restriction enforces role** — reviewers can't edit, architects can't code
+2. **Memory persists across sessions** — agents learn your project's patterns
+3. **Cheap agents for cheap tasks** — scout runs on Haiku, doc-writer on Sonnet
+4. **Isolation for safety** — implementer runs in a git worktree
+5. **Parallel execution for speed** — review agents run simultaneously
 
 ## Context Management
 

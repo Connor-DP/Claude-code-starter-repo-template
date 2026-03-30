@@ -1,51 +1,43 @@
 # Claude Commands
 
 ## Purpose
-These command files provide standardized workflows for common AI-assisted development tasks. They ensure consistency and completeness across all work.
+These commands provide standardized, agent-powered workflows for AI-assisted development. Each command orchestrates specialized subagents to handle different aspects of the work.
 
 ## Available Commands
 
 ### `/plan` - Create Implementation Plan
-Create a comprehensive plan before starting implementation.
+Design and plan before building. Spawns `@scout` for codebase exploration and `@architect` for system design.
 
-**When to use:**
-- Starting a new feature
-- Beginning a major refactoring
-- Planning a bug fix that affects multiple areas
-- Any non-trivial work
+**When to use:** Starting any non-trivial work — features, refactors, multi-file bug fixes.
 
-**Output:** Task folder with IMPLEMENTATION_PLAN.md, CHECKLIST.md, NOTES.md
+**Agents used:** `@scout` (find patterns), `@architect` (design solution)
 
-**Read:** [plan.md](./plan.md)
+**Output:** `IMPLEMENTATION_PLAN.md`, `CHECKLIST.md`, `NOTES.md` in root
 
 ---
 
 ### `/implement` - Execute Implementation
-Follow the implementation plan systematically.
+Build the plan using agents for coding and quality. Uses `@scout` for codebase questions, `@implementer` for isolated coding, and `@architect` for design questions that arise.
 
-**When to use:**
-- After creating a plan
-- When you have clear requirements
-- For executing predefined tasks
+**When to use:** After `/plan` has created a reviewed implementation plan.
 
-**Output:** Working code, tests, documentation
+**Agents used:** `@scout` (explore), `@implementer` (code in worktree), `@architect` (design questions), `@doc-writer` (ADRs)
 
-**Read:** [implement.md](./implement.md)
+**Output:** Working code, tests, updated documentation
 
 ---
 
 ### `/review` - Verify Completion
-Comprehensive quality check before marking done.
+Comprehensive quality gate using three agents in parallel. All review agents are read-only — they find problems but cannot modify code.
 
-**When to use:**
-- After implementation is complete
-- Before archiving a task
-- Before creating a pull request
-- When verifying quality
+**When to use:** After implementation, before PR or archive.
 
-**Output:** Verification that all criteria are met
+**Agents used (in parallel):**
+- `@reviewer` — code quality, scope discipline, completion criteria
+- `@qa` — test coverage, bug finding, edge cases
+- `@security-auditor` — OWASP, secrets, dependency vulnerabilities
 
-**Read:** [review.md](./review.md)
+**Output:** Three independent reports, clear pass/fail verdict
 
 ---
 
@@ -64,19 +56,17 @@ Migrate legacy code to current architectural standards.
 
 ---
 
-## Usage
-
-### For AI Agents
-When the user mentions a command (e.g., "run /plan"), follow the workflow in that command file exactly. These are designed to reduce variance and ensure completeness.
-
-### For Human Developers
-These documents also serve as checklists and guides for manual development work. Follow them when working without AI assistance to maintain consistency.
-
-## Command Workflow
+## Agent-Powered Workflow
 
 ### New Feature Development
 ```
-/plan → /implement → /review → archive
+/plan                    /implement                /review
+┌──────────────┐        ┌──────────────┐         ┌──────────────────┐
+│ @scout       │───────▶│ @scout       │────────▶│ @reviewer        │
+│ @architect   │        │ @implementer │         │ @qa              │ (parallel)
+│              │        │ @architect   │         │ @security-auditor│
+│              │        │ @doc-writer  │         │ @doc-writer      │
+└──────────────┘        └──────────────┘         └──────────────────┘
 ```
 
 ### Iterative Development
@@ -89,13 +79,21 @@ These documents also serve as checklists and guides for manual development work.
 /migrate → /plan (migration strategy) → /implement → /review → archive
 ```
 
+## Key Design Decisions
+
+1. **Agents enforce roles via tool restrictions** — reviewers literally cannot edit code
+2. **`@scout` is cheap (Haiku)** — use it constantly for codebase questions
+3. **`@implementer` uses git worktrees** — isolated development, safe to experiment
+4. **Review agents run in parallel** — three independent assessments simultaneously
+5. **Agents have project memory** — they learn your patterns across sessions
+
 ## Customization
 
 These commands are templates. Customize them for your project:
-- Add project-specific steps
-- Adjust verification criteria
-- Include custom tooling
-- Add domain-specific checks
+- Add project-specific verification steps
+- Adjust which agents are spawned
+- Add domain-specific agents in `.claude/agents/`
+- Modify tool restrictions per your security requirements
 
 ## Integration with CLAUDE.md
 
@@ -107,7 +105,6 @@ Consider adding for your project:
 - `/debug` - Debugging workflow
 - `/deploy` - Deployment checklist
 - `/document` - Documentation generation
-- `/security` - Security audit workflow
 - `/performance` - Performance optimization workflow
 
 ---
