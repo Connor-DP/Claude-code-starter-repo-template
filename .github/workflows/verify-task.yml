@@ -15,38 +15,58 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Detect project type from settings.json
+      - name: Detect project type
+        id: detect
+        run: |
+          if [ -f "package.json" ]; then
+            echo "has_node=true" >> $GITHUB_OUTPUT
+          fi
+          if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            echo "has_python=true" >> $GITHUB_OUTPUT
+          fi
+          if [ -f "go.mod" ]; then
+            echo "has_go=true" >> $GITHUB_OUTPUT
+          fi
+          if [ -f "Cargo.toml" ]; then
+            echo "has_rust=true" >> $GITHUB_OUTPUT
+          fi
+          # Read node version from .nvmrc or default to 20
+          if [ -f ".nvmrc" ]; then
+            echo "node_version=$(cat .nvmrc | tr -d 'v')" >> $GITHUB_OUTPUT
+          else
+            echo "node_version=20" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: ${{ steps.detect.outputs.node_version }}
           cache: 'npm'
-        # Only if package.json exists
-        if: hashFiles('package.json') != ''
+        if: steps.detect.outputs.has_node == 'true'
 
-      - name: Install dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        if: steps.detect.outputs.has_python == 'true'
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+        if: steps.detect.outputs.has_go == 'true'
+
+      - name: Install Node dependencies
         run: npm ci
-        if: hashFiles('package.json') != ''
+        if: steps.detect.outputs.has_node == 'true'
 
-      - name: Run linter
-        run: npm run lint
-        if: hashFiles('package.json') != ''
-        continue-on-error: false
-
-      - name: Run type checking
-        run: npm run type-check
-        if: hashFiles('package.json') != ''
-        continue-on-error: false
-
-      - name: Run tests
-        run: npm test
-        if: hashFiles('package.json') != ''
-        env:
-          CI: true
-
-      - name: Check test coverage
-        run: npm run test:coverage
-        if: hashFiles('package.json') != ''
-        continue-on-error: true
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+          if [ -f "pyproject.toml" ]; then pip install -e ".[dev]" 2>/dev/null || pip install -e .; fi
+        if: steps.detect.outputs.has_python == 'true'
 
       - name: Run task verification script
         run: |
@@ -54,85 +74,50 @@ jobs:
             chmod +x ./src/scripts/verify-task.sh
             ./src/scripts/verify-task.sh
           else
-            echo "⚠️  verify-task.sh not found, skipping"
+            echo "verify-task.sh not found, skipping"
           fi
-
-      - name: Check for anti-patterns
-        run: |
-          echo "🔍 Checking for anti-patterns..."
-
-          # Example: Check for console.log in production code
-          if grep -r "console\.log" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//.*console\.log"; then
-            echo "❌ Found console.log statements in source code"
-            exit 1
-          fi
-
-          # Example: Check for hardcoded credentials
-          if grep -r -i "password.*=.*['\"]" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//"; then
-            echo "⚠️  Possible hardcoded credentials found"
-            exit 1
-          fi
-
-          # Example: Check for TODO comments
-          if grep -r "TODO" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "//.*future" | grep -v "//.*later"; then
-            echo "⚠️  Found TODO comments - resolve before merging"
-            exit 1
-          fi
-
-          echo "✅ No anti-patterns detected"
-        continue-on-error: false
+        timeout-minutes: 10
 
       - name: Verify documentation completeness
         run: |
-          echo "📚 Checking documentation..."
+          echo "Checking documentation..."
 
           # Check if IMPLEMENTATION_PLAN.md exists in root (indicates active task)
           if [ -f "IMPLEMENTATION_PLAN.md" ]; then
-            echo "📋 Active task detected: IMPLEMENTATION_PLAN.md exists"
+            echo "Active task detected: IMPLEMENTATION_PLAN.md exists"
 
-            # Verify CHECKLIST.md also exists
             if [ ! -f "CHECKLIST.md" ]; then
-              echo "❌ IMPLEMENTATION_PLAN.md exists but CHECKLIST.md is missing"
+              echo "IMPLEMENTATION_PLAN.md exists but CHECKLIST.md is missing"
               exit 1
             fi
 
-            # Check if status is DONE or READY_FOR_REVIEW
-            if ! grep -q "Status:.*\(DONE\|READY_FOR_REVIEW\)" IMPLEMENTATION_PLAN.md; then
-              echo "⚠️  IMPLEMENTATION_PLAN.md status is not DONE or READY_FOR_REVIEW"
-              echo "ℹ️  If this is a work-in-progress PR, this is expected"
+            if ! grep -qE "Status:.*(DONE|READY_FOR_REVIEW)" IMPLEMENTATION_PLAN.md; then
+              echo "IMPLEMENTATION_PLAN.md status is not DONE or READY_FOR_REVIEW"
+              echo "If this is a work-in-progress PR, this is expected"
             fi
           else
-            echo "✅ No active task in root (clean state)"
+            echo "No active task in root (clean state)"
           fi
 
-          # Check if README exists
           if [ ! -f "README.md" ]; then
-            echo "⚠️  README.md not found"
+            echo "README.md not found"
             exit 1
           fi
 
-          echo "✅ Documentation checks passed"
+          echo "Documentation checks passed"
 
       - name: Check ADR index consistency
         run: |
-          echo "📖 Verifying ADR index..."
+          if [ -d "docs/adr" ] && [ -f "docs/adr/README.md" ]; then
+            adr_files=$(find docs/adr -name "*.md" ! -name "README.md" ! -name "*example*" 2>/dev/null | wc -l | tr -d ' ')
+            # Count links in README (more robust than counting pipe chars)
+            readme_entries=$(grep -cE "\[.*\]\(.*\.md\)" docs/adr/README.md 2>/dev/null || echo 0)
 
-          if [ -d "docs/adr" ]; then
-            # Count ADR files (excluding README and templates)
-            adr_files=$(find docs/adr -name "*.md" ! -name "README.md" ! -name "*example*" | wc -l)
-
-            # Count entries in README (excluding header rows)
-            if [ -f "docs/adr/README.md" ]; then
-              readme_entries=$(grep -c "^\|.*\[.*\].*\|" docs/adr/README.md || echo 0)
-              # Subtract header rows (usually 2)
-              readme_entries=$((readme_entries - 2))
-
-              if [ $adr_files -gt $readme_entries ]; then
-                echo "⚠️  Found $adr_files ADR files but only $readme_entries entries in README"
-                echo "ℹ️  Remember to update docs/adr/README.md when creating ADRs"
-              else
-                echo "✅ ADR index is up to date"
-              fi
+            if [ "$adr_files" -gt "$readme_entries" ]; then
+              echo "Found $adr_files ADR files but only $readme_entries entries in README"
+              echo "Update docs/adr/README.md when creating ADRs"
+            else
+              echo "ADR index is up to date"
             fi
           fi
 
@@ -144,46 +129,42 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check for secrets in code
+      - name: Install gitleaks
         run: |
-          echo "🔐 Scanning for potential secrets..."
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.21.2_linux_x64.tar.gz | tar xz
+          sudo mv gitleaks /usr/local/bin/
 
-          # Check for common secret patterns
-          patterns=(
-            "api[_-]?key"
-            "api[_-]?secret"
-            "access[_-]?token"
-            "auth[_-]?token"
-            "secret[_-]?key"
-            "private[_-]?key"
-            "aws[_-]?access"
-            "aws[_-]?secret"
-          )
-
-          found_secrets=false
-          for pattern in "${patterns[@]}"; do
-            if grep -r -i "$pattern.*=.*['\"]" . --include="*.ts" --include="*.js" --exclude-dir=node_modules --exclude-dir=dist 2>/dev/null | grep -v "process.env" | grep -v "//"; then
-              echo "⚠️  Potential secret found matching pattern: $pattern"
-              found_secrets=true
-            fi
-          done
-
-          if [ "$found_secrets" = true ]; then
-            echo "❌ Potential secrets detected in code"
-            echo "ℹ️  Use environment variables instead"
+      - name: Scan for secrets
+        run: |
+          echo "Scanning for secrets with gitleaks..."
+          gitleaks detect --source . --no-git --redact -v || {
+            echo "Secrets detected in codebase"
+            echo "Use environment variables instead of hardcoding secrets"
             exit 1
-          fi
-
-          echo "✅ No secrets detected"
+          }
+          echo "No secrets detected"
 
       - name: Check for .env files in git
         run: |
           if git ls-files | grep -q "\.env$"; then
-            echo "❌ .env file is tracked in git"
-            echo "ℹ️  Add .env to .gitignore and remove from git history"
+            echo ".env file is tracked in git"
+            echo "Add .env to .gitignore and remove from git history"
             exit 1
           fi
-          echo "✅ No .env files tracked in git"
+          echo "No .env files tracked in git"
+
+      - name: Dependency audit
+        run: |
+          if [ -f "package.json" ]; then
+            npm audit --production 2>/dev/null || echo "npm audit found issues — review above"
+          fi
+          if [ -f "requirements.txt" ]; then
+            pip install pip-audit 2>/dev/null && pip-audit -r requirements.txt || echo "pip-audit found issues"
+          fi
+          if [ -f "Cargo.toml" ]; then
+            cargo install cargo-audit 2>/dev/null && cargo audit || echo "cargo-audit found issues"
+          fi
+        continue-on-error: true
 
   quality:
     name: Code Quality
@@ -193,32 +174,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-        if: hashFiles('package.json') != ''
-
-      - name: Install dependencies
-        run: npm ci
-        if: hashFiles('package.json') != ''
-
-      - name: Check for unused dependencies
+      - name: Check for anti-patterns
         run: |
-          if command -v npx &> /dev/null; then
-            echo "📦 Checking for unused dependencies..."
-            npx depcheck --ignores="@types/*,eslint-*,prettier" || echo "⚠️  Some unused dependencies found"
-          fi
-        continue-on-error: true
+          echo "Checking for anti-patterns..."
+          ISSUES=0
 
-      - name: Check bundle size (if applicable)
-        run: |
-          if [ -f "package.json" ] && grep -q "build" package.json; then
-            echo "📊 Building project to check bundle size..."
-            npm run build || echo "⚠️  Build failed or not configured"
+          # Check for debug statements in source
+          SRC_DIR="src"
+          if [ -d "$SRC_DIR" ]; then
+            DEBUG_STMTS=$(grep -rn "console\.log\|console\.debug" "$SRC_DIR" \
+              --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null \
+              | grep -v "//.*console\." \
+              | grep -v "\.test\." \
+              | grep -v "\.spec\." \
+              | wc -l | tr -d ' ')
+
+            if [ "$DEBUG_STMTS" -gt 0 ]; then
+              echo "Found $DEBUG_STMTS debug statements in source code"
+              ISSUES=$((ISSUES + 1))
+            fi
           fi
-        continue-on-error: true
+
+          # Check for hardcoded credentials
+          if grep -rE "(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}" \
+            --include="*.ts" --include="*.js" --include="*.py" --include="*.go" --include="*.rs" \
+            . 2>/dev/null \
+            | grep -v "process\.env\|os\.environ\|os\.Getenv\|env::var" \
+            | grep -v "node_modules\|venv\|target" \
+            | grep -v "//\|#" \
+            | head -1 > /dev/null 2>&1; then
+            echo "Possible hardcoded credentials found"
+            ISSUES=$((ISSUES + 1))
+          fi
+
+          if [ "$ISSUES" -gt 0 ]; then
+            echo "Anti-pattern issues found: $ISSUES"
+            exit 1
+          fi
+
+          echo "No anti-patterns detected"
 
   notify:
     name: Report Status
@@ -229,14 +223,14 @@ jobs:
     steps:
       - name: Check job statuses
         run: |
-          echo "📊 Workflow Results:"
+          echo "Workflow Results:"
           echo "  Verification: ${{ needs.verify.result }}"
           echo "  Security: ${{ needs.security.result }}"
           echo "  Quality: ${{ needs.quality.result }}"
 
           if [ "${{ needs.verify.result }}" != "success" ] || [ "${{ needs.security.result }}" != "success" ]; then
-            echo "❌ Some critical checks failed"
+            echo "Some critical checks failed"
             exit 1
           fi
 
-          echo "✅ All critical checks passed"
+          echo "All critical checks passed"

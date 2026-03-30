@@ -19,57 +19,39 @@
 #      {
 #        "commands": {
 #          "test": "pytest",
-#          "lint": "flake8 .",
+#          "lint": "ruff check .",
 #          "typecheck": "mypy .",
 #          "build": "python -m build",
-#          "format": "black --check ."
+#          "format": "ruff format --check ."
 #        }
 #      }
 #
 #    The script will automatically use these commands. No need to edit this file!
 #
-#    See .claude/settings.json → "examples" section for Python, Go, Rust configs.
+#    See .claude/settings.json "examples" section for Python, Go, Rust configs.
 #
 # 2. BLOCKING RULES (What causes verification to fail?)
 #    ---------------------------------------------------
-#    Configure in .claude/settings.json → "verification" section:
+#    Configure in .claude/settings.json "verification" section:
 #
 #      {
 #        "verification": {
-#          "requiredCoverage": null,        // Set to number like 80 to require coverage
-#          "blockOnTodo": false,             // Set to true to fail if TODO comments found
-#          "blockOnConsole": true,           // Fails if console.log found in src/
-#          "srcDir": "src"                   // Directory to scan for anti-patterns
+#          "requiredCoverage": null,
+#          "blockOnTodo": false,
+#          "blockOnConsole": true,
+#          "srcDir": "src",
+#          "timeoutSeconds": 300
 #        }
 #      }
 #
 # 3. ADDING CUSTOM CHECKS
 #    ---------------------
-#    If you need project-specific checks (e.g., database migrations, custom linting),
-#    add them to the "Custom Checks" section at the bottom of this script.
-#
-#    Example:
-#      echo "Checking database migrations..."
-#      if [ -d "migrations/pending" ] && [ "$(ls -A migrations/pending)" ]; then
-#          echo "❌ Unapplied database migrations found"
-#          FAILED=1
-#      fi
+#    Add custom checks to the "Custom Checks" section at the bottom of this script.
 #
 # 4. SECRET SCANNING
 #    ----------------
-#    This script uses gitleaks if available, falls back to grep patterns.
-#    To customize secret patterns, edit the SECRET_PATTERNS array below.
-#
-# 5. GETTING HELP
-#    ------------
-#    If verification fails, the script shows:
-#    - The exact command that failed
-#    - The first 20 lines of output
-#    - Where to look for more details
-#
-#    For debugging, run commands manually:
-#      npm test        # Or whatever your test command is
-#      npm run lint    # Or whatever your lint command is
+#    Uses gitleaks if available, falls back to enhanced regex patterns.
+#    For production: install gitleaks (https://github.com/gitleaks/gitleaks)
 #
 # ============================================================================
 
@@ -86,6 +68,15 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SETTINGS_FILE="$ROOT_DIR/.claude/settings.json"
 
 FAILED=0
+CLEANUP_FILES=()
+
+# Cleanup temp files on exit
+cleanup() {
+    for f in "${CLEANUP_FILES[@]}"; do
+        rm -f "$f"
+    done
+}
+trap cleanup EXIT
 
 echo "=========================================="
 echo "  Definition of Done Verification"
@@ -98,36 +89,68 @@ get_setting() {
     local default=$2
 
     if command -v jq &> /dev/null && [ -f "$SETTINGS_FILE" ]; then
-        local value=$(jq -r "$key // empty" "$SETTINGS_FILE" 2>/dev/null)
-        if [ ! -z "$value" ] && [ "$value" != "null" ]; then
+        local value
+        value=$(jq -r "$key // empty" "$SETTINGS_FILE" 2>/dev/null)
+        if [ -n "$value" ] && [ "$value" != "null" ]; then
             echo "$value"
             return
         fi
+    elif [ -f "$SETTINGS_FILE" ] && ! command -v jq &> /dev/null; then
+        echo -e "${YELLOW}Warning: jq not installed. Using default settings.${NC}" >&2
+        echo -e "${YELLOW}Install jq for config-driven verification: https://jqlang.github.io/jq/${NC}" >&2
     fi
     echo "$default"
 }
 
-# Helper: Run command with captured output
+# Helper: Run command with timeout and captured output
 run_check() {
     local name="$1"
     local cmd="$2"
-    local output_file=$(mktemp)
+    local output_file
+    output_file=$(mktemp)
+    CLEANUP_FILES+=("$output_file")
 
     echo -n "$name... "
 
-    if eval "$cmd" > "$output_file" 2>&1; then
-        echo -e "${GREEN}✓${NC}"
-        rm -f "$output_file"
+    # Check if the command's tool exists
+    local first_word
+    first_word=$(echo "$cmd" | awk '{print $1}')
+    if ! command -v "$first_word" &> /dev/null 2>&1; then
+        # Handle npm/npx/pip specially — check for package manager
+        if [[ "$first_word" =~ ^(npm|npx|yarn|pnpm)$ ]] && ! command -v "$first_word" &> /dev/null; then
+            echo -e "${YELLOW}skipped ($first_word not found)${NC}"
+            return 0
+        fi
+    fi
+
+    # Run with timeout if available
+    local timeout_cmd=""
+    local timeout_secs
+    timeout_secs=$(get_setting ".verification.timeoutSeconds" "300")
+
+    if command -v timeout &> /dev/null; then
+        timeout_cmd="timeout ${timeout_secs}s"
+    elif command -v gtimeout &> /dev/null; then
+        # macOS with coreutils
+        timeout_cmd="gtimeout ${timeout_secs}s"
+    fi
+
+    if $timeout_cmd eval "$cmd" > "$output_file" 2>&1; then
+        echo -e "${GREEN}pass${NC}"
         return 0
     else
-        echo -e "${RED}✗${NC}"
+        local exit_code=$?
+        if [ "$exit_code" -eq 124 ]; then
+            echo -e "${RED}TIMEOUT (${timeout_secs}s)${NC}"
+        else
+            echo -e "${RED}fail${NC}"
+        fi
         echo "   Command: $cmd"
         echo "   Output:"
         sed 's/^/   /' "$output_file" | head -20
-        if [ $(wc -l < "$output_file") -gt 20 ]; then
+        if [ "$(wc -l < "$output_file")" -gt 20 ]; then
             echo "   ... (output truncated)"
         fi
-        rm -f "$output_file"
         FAILED=1
         return 1
     fi
@@ -154,37 +177,36 @@ echo -e "${BLUE}1. Code Quality Checks${NC}"
 echo "----------------------"
 
 # Linting
-if [ "$LINT_CMD" != "null" ] && [ ! -z "$LINT_CMD" ]; then
-    # Skip npm commands if no package.json exists
+if [ "$LINT_CMD" != "null" ] && [ -n "$LINT_CMD" ]; then
     if [[ "$LINT_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
-        echo -e "${YELLOW}⊘${NC} Linting skipped (no package.json found)"
+        echo -e "${YELLOW}skip${NC} Linting (no package.json found)"
     else
-        run_check "Linting" "$LINT_CMD"
+        run_check "Linting" "$LINT_CMD" || true
     fi
 else
-    echo -e "${YELLOW}⊘${NC} No lint command configured"
+    echo -e "${YELLOW}skip${NC} No lint command configured"
 fi
 
 # Type Checking
-if [ "$TYPE_CMD" != "null" ] && [ ! -z "$TYPE_CMD" ]; then
+if [ "$TYPE_CMD" != "null" ] && [ -n "$TYPE_CMD" ]; then
     if [[ "$TYPE_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
-        echo -e "${YELLOW}⊘${NC} Type checking skipped (no package.json found)"
+        echo -e "${YELLOW}skip${NC} Type checking (no package.json found)"
     else
-        run_check "Type checking" "$TYPE_CMD"
+        run_check "Type checking" "$TYPE_CMD" || true
     fi
 else
-    echo -e "${YELLOW}⊘${NC} No typecheck command configured"
+    echo -e "${YELLOW}skip${NC} No typecheck command configured"
 fi
 
 # Formatting
-if [ "$FORMAT_CMD" != "null" ] && [ ! -z "$FORMAT_CMD" ]; then
+if [ "$FORMAT_CMD" != "null" ] && [ -n "$FORMAT_CMD" ]; then
     if [[ "$FORMAT_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
-        echo -e "${YELLOW}⊘${NC} Code formatting skipped (no package.json found)"
+        echo -e "${YELLOW}skip${NC} Code formatting (no package.json found)"
     else
-        run_check "Code formatting" "$FORMAT_CMD"
+        run_check "Code formatting" "$FORMAT_CMD" || true
     fi
 else
-    echo -e "${YELLOW}⊘${NC} No format check command configured"
+    echo -e "${YELLOW}skip${NC} No format check command configured"
 fi
 
 echo ""
@@ -193,14 +215,14 @@ echo ""
 echo -e "${BLUE}2. Testing${NC}"
 echo "----------"
 
-if [ "$TEST_CMD" != "null" ] && [ ! -z "$TEST_CMD" ]; then
+if [ "$TEST_CMD" != "null" ] && [ -n "$TEST_CMD" ]; then
     if [[ "$TEST_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
-        echo -e "${YELLOW}⊘${NC} Tests skipped (no package.json found)"
+        echo -e "${YELLOW}skip${NC} Tests (no package.json found)"
     else
-        run_check "All tests" "$TEST_CMD"
+        run_check "All tests" "$TEST_CMD" || true
     fi
 else
-    echo -e "${YELLOW}⊘${NC} No test command configured"
+    echo -e "${YELLOW}skip${NC} No test command configured"
 fi
 
 echo ""
@@ -209,14 +231,14 @@ echo ""
 echo -e "${BLUE}3. Build Validation${NC}"
 echo "-------------------"
 
-if [ "$BUILD_CMD" != "null" ] && [ ! -z "$BUILD_CMD" ]; then
+if [ "$BUILD_CMD" != "null" ] && [ -n "$BUILD_CMD" ]; then
     if [[ "$BUILD_CMD" == npm* ]] && [ "$HAS_PACKAGE_JSON" = false ]; then
-        echo -e "${YELLOW}⊘${NC} Build skipped (no package.json found)"
+        echo -e "${YELLOW}skip${NC} Build (no package.json found)"
     else
-        run_check "Build" "$BUILD_CMD"
+        run_check "Build" "$BUILD_CMD" || true
     fi
 else
-    echo -e "${YELLOW}⊘${NC} No build command configured"
+    echo -e "${YELLOW}skip${NC} No build command configured"
 fi
 
 echo ""
@@ -230,23 +252,98 @@ echo -n "Scanning for secrets... "
 # Try professional tool first (gitleaks)
 if command -v gitleaks &> /dev/null; then
     if gitleaks detect --source="$ROOT_DIR" --no-git --redact > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ (via gitleaks)${NC}"
+        echo -e "${GREEN}pass (gitleaks)${NC}"
     else
-        echo -e "${RED}✗ Secrets detected (via gitleaks)${NC}"
+        echo -e "${RED}fail - Secrets detected (gitleaks)${NC}"
+        echo "   Run: gitleaks detect --source . --verbose"
         FAILED=1
     fi
-# Fallback to grep-based detection
+# Enhanced grep-based detection
 elif [ -d "$ROOT_DIR/$SRC_DIR" ]; then
-    # Look for common secret patterns
-    if grep -rE "(api[_-]?key|apikey|password|passwd|secret[_-]?key|access[_-]?token|auth[_-]?token)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}" "$ROOT_DIR/$SRC_DIR" 2>/dev/null | grep -v "process.env" | grep -v "//"; then
-        echo -e "${RED}✗ Possible secrets detected${NC}"
-        echo -e "${YELLOW}   Tip: Install 'gitleaks' for better detection${NC}"
+    SECRET_FOUND=false
+
+    # Extended patterns for better detection
+    SECRET_PATTERNS=(
+        # API keys and tokens
+        "(api[_-]?key|apikey|api[_-]?secret)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}"
+        "(access[_-]?token|auth[_-]?token|bearer)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}"
+        # Passwords
+        "(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}"
+        # AWS credentials
+        "AKIA[0-9A-Z]{16}"
+        # Private keys
+        "-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----"
+        # JWT tokens (3 base64 segments separated by dots)
+        "eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\."
+        # Generic secret/key assignments
+        "(secret[_-]?key|private[_-]?key|signing[_-]?key)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{8,}"
+        # Connection strings with credentials
+        "(mysql|postgres|mongodb|redis)://[^:]+:[^@]+@"
+    )
+
+    for pattern in "${SECRET_PATTERNS[@]}"; do
+        if grep -rE "$pattern" "$ROOT_DIR/$SRC_DIR" 2>/dev/null \
+            | grep -v "process\.env" \
+            | grep -v "os\.environ" \
+            | grep -v "os\.Getenv" \
+            | grep -v "env::var" \
+            | grep -v "//.*" \
+            | grep -v "#.*" \
+            | grep -v "\.example" \
+            | grep -v "\.sample" \
+            | grep -v "node_modules" \
+            | head -1 > /dev/null 2>&1; then
+            SECRET_FOUND=true
+            break
+        fi
+    done
+
+    if [ "$SECRET_FOUND" = true ]; then
+        echo -e "${RED}fail - Possible secrets detected${NC}"
+        echo -e "${YELLOW}   Install gitleaks for production-grade scanning: https://github.com/gitleaks/gitleaks${NC}"
         FAILED=1
     else
-        echo -e "${GREEN}✓ (via grep)${NC}"
+        echo -e "${GREEN}pass (grep)${NC}"
+        echo -e "${YELLOW}   Tip: Install gitleaks for production-grade scanning${NC}"
     fi
 else
-    echo -e "${YELLOW}⊘ Source directory not found${NC}"
+    echo -e "${YELLOW}skip${NC} Source directory not found"
+fi
+
+# Dependency audit
+echo -n "Dependency audit... "
+if [ "$HAS_PACKAGE_JSON" = true ] && command -v npm &> /dev/null; then
+    AUDIT_OUTPUT=$(mktemp)
+    CLEANUP_FILES+=("$AUDIT_OUTPUT")
+    if npm audit --production 2>/dev/null > "$AUDIT_OUTPUT"; then
+        echo -e "${GREEN}pass (npm)${NC}"
+    else
+        CRITICAL=$(grep -c "critical" "$AUDIT_OUTPUT" 2>/dev/null || echo "0")
+        HIGH=$(grep -c "high" "$AUDIT_OUTPUT" 2>/dev/null || echo "0")
+        if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            echo -e "${RED}fail - ${CRITICAL} critical, ${HIGH} high vulnerabilities${NC}"
+            echo "   Run: npm audit for details"
+            FAILED=1
+        else
+            echo -e "${YELLOW}warn - vulnerabilities found (non-critical)${NC}"
+        fi
+    fi
+elif [ -f "$ROOT_DIR/requirements.txt" ] && command -v pip-audit &> /dev/null; then
+    if pip-audit -r "$ROOT_DIR/requirements.txt" > /dev/null 2>&1; then
+        echo -e "${GREEN}pass (pip-audit)${NC}"
+    else
+        echo -e "${RED}fail - vulnerabilities detected${NC}"
+        FAILED=1
+    fi
+elif [ -f "$ROOT_DIR/Cargo.toml" ] && command -v cargo-audit &> /dev/null; then
+    if cargo audit > /dev/null 2>&1; then
+        echo -e "${GREEN}pass (cargo-audit)${NC}"
+    else
+        echo -e "${RED}fail - vulnerabilities detected${NC}"
+        FAILED=1
+    fi
+else
+    echo -e "${YELLOW}skip${NC} No audit tool available"
 fi
 
 echo ""
@@ -255,18 +352,45 @@ echo ""
 echo -e "${BLUE}5. Code Hygiene${NC}"
 echo "---------------"
 
-# Check for console.log (if configured to block)
+# Check for console.log / print debugging (if configured to block)
 if [ "$BLOCK_CONSOLE" = "true" ] && [ -d "$ROOT_DIR/$SRC_DIR" ]; then
-    echo -n "Console.log statements... "
-    if grep -r "console\.log" "$ROOT_DIR/$SRC_DIR" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | grep -v "//"; then
-        echo -e "${RED}✗ Found console.log${NC}"
-        echo "   Remove debugging console.log statements"
+    echo -n "Debug statements... "
+    DEBUG_FOUND=false
+
+    # JavaScript/TypeScript: console.log
+    if find "$ROOT_DIR/$SRC_DIR" -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" 2>/dev/null | head -1 | grep -q .; then
+        if grep -rn "console\.log\|console\.debug" "$ROOT_DIR/$SRC_DIR" \
+            --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null \
+            | grep -v "//.*console\." \
+            | grep -v "\.test\." \
+            | grep -v "\.spec\." \
+            | grep -v "__tests__" \
+            | head -1 > /dev/null 2>&1; then
+            DEBUG_FOUND=true
+        fi
+    fi
+
+    # Python: print()
+    if find "$ROOT_DIR/$SRC_DIR" -name "*.py" 2>/dev/null | head -1 | grep -q .; then
+        if grep -rn "^\s*print(" "$ROOT_DIR/$SRC_DIR" \
+            --include="*.py" 2>/dev/null \
+            | grep -v "#.*print" \
+            | grep -v "test_" \
+            | grep -v "_test\.py" \
+            | head -1 > /dev/null 2>&1; then
+            DEBUG_FOUND=true
+        fi
+    fi
+
+    if [ "$DEBUG_FOUND" = true ]; then
+        echo -e "${RED}fail - Debug statements in source code${NC}"
+        echo "   Remove console.log/print debugging before merging"
         FAILED=1
     else
-        echo -e "${GREEN}✓${NC}"
+        echo -e "${GREEN}pass${NC}"
     fi
 else
-    echo -e "${YELLOW}⊘${NC} Console.log check disabled or no source directory"
+    echo -e "${YELLOW}skip${NC} Debug statement check disabled or no source directory"
 fi
 
 # Check for untracked TODOs (if configured to block)
@@ -276,41 +400,80 @@ if [ "$BLOCK_TODO" = "true" ] && [ -d "$ROOT_DIR/$SRC_DIR" ]; then
     STRAY_TODOS=$(grep -r "TODO" "$ROOT_DIR/$SRC_DIR" 2>/dev/null | grep -vE "TODO[\(:][\s]*#" | wc -l | tr -d ' ')
 
     if [ "$STRAY_TODOS" -gt 0 ]; then
-        echo -e "${RED}✗ Found $STRAY_TODOS untracked TODOs${NC}"
+        echo -e "${RED}fail - Found $STRAY_TODOS untracked TODOs${NC}"
         echo "   TODOs should reference issues: TODO(#123) or TODO: #123"
         FAILED=1
     else
-        echo -e "${GREEN}✓${NC}"
+        echo -e "${GREEN}pass${NC}"
     fi
 else
-    echo -e "${YELLOW}⊘${NC} TODO check disabled"
+    echo -e "${YELLOW}skip${NC} TODO check disabled"
 fi
 
 # Check for commented-out code
 if [ -d "$ROOT_DIR/$SRC_DIR" ]; then
     echo -n "Commented-out code... "
-    COMMENTED_CODE=$(grep -r "^[[:space:]]*\/\/" "$ROOT_DIR/$SRC_DIR" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | grep -E "(function|const|let|var|if|for|while)" | wc -l | tr -d ' ')
+    COMMENTED_CODE=0
 
-    if [ "$COMMENTED_CODE" -gt 0 ]; then
-        echo -e "${YELLOW}⚠ Found $COMMENTED_CODE instances${NC}"
+    # JS/TS: lines starting with // followed by code keywords
+    JS_COMMENTED=$(grep -r "^[[:space:]]*\/\/" "$ROOT_DIR/$SRC_DIR" \
+        --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null \
+        | grep -E "(function|const|let|var|if|for|while|return|import|export)\b" \
+        | grep -v "// TODO" \
+        | grep -v "// NOTE" \
+        | grep -v "// HACK" \
+        | wc -l | tr -d ' ')
+    COMMENTED_CODE=$((COMMENTED_CODE + JS_COMMENTED))
+
+    # Python: lines starting with # followed by code keywords
+    PY_COMMENTED=$(grep -r "^[[:space:]]*#[[:space:]]" "$ROOT_DIR/$SRC_DIR" \
+        --include="*.py" 2>/dev/null \
+        | grep -E "(def |class |import |from |if |for |while |return )" \
+        | grep -v "# TODO" \
+        | grep -v "# NOTE" \
+        | wc -l | tr -d ' ')
+    COMMENTED_CODE=$((COMMENTED_CODE + PY_COMMENTED))
+
+    if [ "$COMMENTED_CODE" -gt 5 ]; then
+        echo -e "${YELLOW}warn - Found $COMMENTED_CODE instances${NC}"
         echo "   Consider removing commented-out code"
     else
-        echo -e "${GREEN}✓${NC}"
+        echo -e "${GREEN}pass${NC}"
     fi
 fi
 
 echo ""
 
+# ============================================================================
+# 6. Custom Checks (ADD YOUR PROJECT-SPECIFIC CHECKS BELOW)
+# ============================================================================
+# echo -e "${BLUE}6. Custom Checks${NC}"
+# echo "----------------"
+#
+# Example: Check for unapplied database migrations
+# if [ -d "migrations/pending" ] && [ "$(ls -A migrations/pending)" ]; then
+#     echo -e "${RED}fail${NC} Unapplied database migrations found"
+#     FAILED=1
+# fi
+#
+# Example: Check bundle size
+# if [ -f "dist/bundle.js" ]; then
+#     SIZE=$(wc -c < dist/bundle.js)
+#     if [ "$SIZE" -gt 500000 ]; then
+#         echo -e "${YELLOW}warn${NC} Bundle size is ${SIZE} bytes (>500KB)"
+#     fi
+# fi
+
 # Final Result
 echo "=========================================="
 if [ $FAILED -eq 0 ]; then
-    echo -e "${GREEN}✓ All verification checks passed!${NC}"
+    echo -e "${GREEN}All verification checks passed!${NC}"
     echo "=========================================="
     echo ""
     echo "Task is ready for review and archival."
     exit 0
 else
-    echo -e "${RED}✗ Some verification checks failed${NC}"
+    echo -e "${RED}Some verification checks failed${NC}"
     echo "=========================================="
     echo ""
     echo "Please fix the issues above before marking the task as done."

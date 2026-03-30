@@ -1,4 +1,40 @@
 {
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "Agent"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_PARAM_file_path\"; if [[ \"$FILE\" =~ \\.(ts|tsx|js|jsx)$ ]] && command -v npx &>/dev/null && [ -f package.json ]; then npx eslint --fix \"$FILE\" 2>/dev/null || true; fi'"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'CMD=\"$CLAUDE_TOOL_PARAM_command\"; if echo \"$CMD\" | grep -qE \"rm\\s+-rf\\s+/|DROP\\s+TABLE|DROP\\s+DATABASE\"; then echo \"BLOCKED: Destructive command detected. Review manually.\" >&2; exit 2; fi'"
+          }
+        ]
+      }
+    ]
+  },
+
   "contextManagement": {
     "maxTokens": 200000,
     "priorityFiles": [
@@ -41,7 +77,8 @@
     "requiredCoverage": null,
     "blockOnTodo": false,
     "blockOnConsole": true,
-    "srcDir": "src"
+    "srcDir": "src",
+    "timeoutSeconds": 300
   },
   "hints": {
     "alwaysReadFirst": [
@@ -70,22 +107,17 @@
     "activeTaskLocation": "root",
     "archiveLocation": "ai/TASKS/archive/"
   },
-  "tokenOptimization": {
-    "note": "Priority files are sent on every turn. Other docs should be read once at task start and kept in conversation history."
-  },
   "examples": {
-    "note": "Example configurations for different stacks",
+    "_note": "Copy the relevant commands/verification blocks above for your stack",
     "python": {
       "commands": {
         "test": "pytest",
-        "lint": "flake8 .",
+        "lint": "ruff check .",
         "typecheck": "mypy .",
         "build": "python -m build",
-        "format": "black --check ."
+        "format": "ruff format --check ."
       },
-      "verification": {
-        "srcDir": "src"
-      }
+      "verification": { "srcDir": "src" }
     },
     "go": {
       "commands": {
@@ -95,21 +127,17 @@
         "build": "go build ./...",
         "format": "gofmt -l ."
       },
-      "verification": {
-        "srcDir": "."
-      }
+      "verification": { "srcDir": "." }
     },
     "rust": {
       "commands": {
         "test": "cargo test",
-        "lint": "cargo clippy",
+        "lint": "cargo clippy -- -D warnings",
         "typecheck": "cargo check",
         "build": "cargo build",
         "format": "cargo fmt -- --check"
       },
-      "verification": {
-        "srcDir": "src"
-      }
+      "verification": { "srcDir": "src" }
     }
   }
 }
