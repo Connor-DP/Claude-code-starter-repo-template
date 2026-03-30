@@ -34,10 +34,10 @@ No changes needed! Already configured.
 {
   "commands": {
     "test": "pytest",
-    "lint": "flake8 .",
+    "lint": "ruff check .",
     "typecheck": "mypy .",
     "build": "python -m build",
-    "format": "black --check ."
+    "format": "ruff format --check ."
   },
   "verification": {
     "srcDir": "src"
@@ -125,16 +125,37 @@ git commit -m "Initial commit from AI template"
 ./src/scripts/task.sh start "project-setup"
 ```
 
-Then ask Claude:
+Then use the agent-powered workflow:
 ```
-Read IMPLEMENTATION_PLAN.md and help me set up the basic file structure and a "Hello World" endpoint.
+/plan
 ```
 
-Claude will:
-1. Read the plan template
-2. Ask clarifying questions
-3. Fill in the implementation details
-4. Create code following your stack configuration
+This spawns `@scout` to explore the codebase and `@architect` to design the approach.
+Then run `/implement` to build and `/review` to verify.
+
+Or for a quick start, ask Claude directly:
+```
+Read IMPLEMENTATION_PLAN.md and help me set up the basic file structure
+and a "Hello World" endpoint. Use @scout to find existing patterns.
+```
+
+---
+
+### 6. Meet the Agents
+
+Your project comes with 7 specialized AI agents. Use them by name:
+
+| Agent | When to use | Example |
+|-------|-------------|---------|
+| `@scout` | Find code, understand patterns | "Use @scout to find how auth works" |
+| `@architect` | Design decisions, trade-offs | "Ask @architect to design the DB schema" |
+| `@implementer` | Build features (runs in worktree) | "Have @implementer build the user API" |
+| `@reviewer` | Code review | "Ask @reviewer to check my changes" |
+| `@qa` | Find bugs, test coverage | "Have @qa test the payment flow" |
+| `@security-auditor` | Security scan | "Run @security-auditor before the PR" |
+| `@doc-writer` | Documentation, ADRs | "Ask @doc-writer to create an ADR" |
+
+`@scout` runs on a cheaper model (Haiku) — use it constantly for codebase questions instead of searching manually.
 
 ---
 
@@ -226,11 +247,11 @@ Before you start coding properly, clean up the template artifacts:
 → ./src/scripts/task.sh finish "feature-name"
 ```
 
-### Commands You Can Use with Claude
-- **`/plan`** - Create implementation plan
-- **`/implement`** - Execute the plan
-- **`/review`** - Verify completion
-- **`/migrate`** - Refactor legacy code
+### Commands & Agents
+- **`/plan`** — Spawns `@scout` + `@architect` to design
+- **`/implement`** — Uses `@scout` + `@implementer` to build
+- **`/review`** — Runs `@reviewer` + `@qa` + `@security-auditor` in parallel
+- **`/migrate`** — Refactor legacy code to current standards
 
 See [.claude/commands/README.md](.claude/commands/README.md) for details.
 

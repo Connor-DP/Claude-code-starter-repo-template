@@ -1,79 +1,96 @@
 # [Your Project Name]
 
-> **Brief description of what your project does**
+> [One-line description of what this project does]
 
-## Overview
-
-Describe your project here. What problem does it solve? Who is it for?
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
 ```bash
-# List what needs to be installed first
-node >= 18.0.0
-npm >= 9.0.0
+# Update these for your stack
+node >= 20.0.0
+npm >= 10.0.0
 ```
 
 ### Installation
 
 ```bash
-# Clone and install
 git clone <your-repo-url>
 cd <your-project>
 npm install
+
+# Verify environment
+./src/scripts/doctor.sh
 ```
 
-### Running the Project
+### Running
 
 ```bash
 # Development
 npm run dev
 
-# Production
-npm run build
-npm start
-
 # Tests
 npm test
+
+# Build
+npm run build
 ```
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature 3
+- [Feature 1]
+- [Feature 2]
+- [Feature 3]
 
 ## Project Structure
 
-See `CLAUDE.md` for the full development workflow and structure.
-
-Key directories:
-- `/src` - Application code
-- `/tests` - Test files
-- `/docs` - Product requirements and documentation
+```
+src/           — Application source code
+tests/         — Test files
+docs/          — Product requirements and technical specs
+  adr/         — Architectural Decision Records
+ai/            — AI-assisted development framework
+  TASKS/       — Task lifecycle tracking
+  DEFINITIONS/ — Quality and completion criteria
+.claude/       — Claude Code configuration
+  agents/      — Specialized AI agents
+  commands/    — Workflow commands (/plan, /implement, /review)
+```
 
 ## Development Workflow
 
-This project uses AI-assisted development with a structured workflow:
+This project uses AI-assisted development with Claude Code. See `CLAUDE.md` for the full workflow.
 
-1. **Start a task**: `./src/scripts/task.sh start "feature-name"`
-2. **Define requirements**: Edit `IMPLEMENTATION_PLAN.md`
-3. **Build the feature**: Work with AI assistant
-4. **Verify**: Run tests and verification
-5. **Archive**: `./src/scripts/task.sh finish "feature-name"`
+### Quick version:
 
-See `CLAUDE.md` for detailed workflow instructions.
+```bash
+# 1. Start a task
+./src/scripts/task.sh start "feature-name"
+
+# 2. Plan, implement, and review with Claude
+#    Use /plan, /implement, /review commands
+#    Agents: @scout, @architect, @implementer, @reviewer, @qa
+
+# 3. Finish and archive
+./src/scripts/task.sh finish "feature-name"
+```
+
+### Available Agents
+
+| Agent | What it does |
+|-------|-------------|
+| `@scout` | Fast codebase search (cheap, use liberally) |
+| `@architect` | System design and trade-off analysis |
+| `@implementer` | Coding in isolated git worktree |
+| `@reviewer` | Code review and scope discipline |
+| `@qa` | Testing and bug finding |
+| `@security-auditor` | OWASP and secret scanning |
+| `@doc-writer` | Documentation and ADRs |
 
 ## Contributing
 
-Please read `CLAUDE.md` for development guidelines and workflow.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
 [Your chosen license]
-
----
-
-**Note**: This project is structured for AI-assisted development. See `CLAUDE.md` to understand the workflow.

@@ -86,26 +86,45 @@ This template is built on these principles:
 
 Keep these in mind when contributing.
 
-## Working with Claude (AI Assistant)
+## Working with Claude & Agents
 
-If you're using Claude to help with contributions:
+This project uses specialized Claude Code agents. When contributing:
 
-### Best Practices
+### Available Agents
+
+| Agent | Use for |
+|-------|---------|
+| `@scout` | Find existing patterns before writing new code |
+| `@architect` | Design decisions for template changes |
+| `@reviewer` | Review your changes before submitting PR |
+| `@qa` | Test your changes for edge cases |
+| `@security-auditor` | Check for security issues |
+
+### Workflow
+
 1. **Start with context:**
    ```
    I want to contribute to the AI-assisted development template.
-   Please read CLAUDE.md to understand the structure.
+   Read CLAUDE.md to understand the structure.
    I want to [describe your contribution goal].
    ```
 
-2. **Use the workflow for template improvements:**
-   - Let Claude create an `IMPLEMENTATION_PLAN.md` for your contribution
-   - Review the plan before implementing
-   - Follow the same discipline you'd use in a real project
+2. **Use agents during development:**
+   - `@scout` to understand existing patterns before changing them
+   - `@architect` if your change affects the template structure
+   - `@reviewer` + `@qa` before submitting your PR
 
-3. **Test thoroughly:**
+3. **Use the formal workflow for non-trivial contributions:**
+   ```bash
+   ./src/scripts/task.sh start "your-contribution"
+   # Use /plan, /implement, /review commands
+   ./src/scripts/task.sh finish "your-contribution"
+   ```
+
+4. **Test thoroughly:**
    - AI-generated changes should be reviewed by humans
-   - Test scripts on multiple platforms if changing bash scripts
+   - Test scripts on both macOS and Linux if changing bash scripts
+   - Run `./src/scripts/verify-task.sh` before submitting
    - Verify documentation accuracy
 
 ## Questions?
