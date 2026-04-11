@@ -282,7 +282,7 @@ elif [ -d "$ROOT_DIR/$SRC_DIR" ]; then
     )
 
     for pattern in "${SECRET_PATTERNS[@]}"; do
-        if grep -rE "$pattern" "$ROOT_DIR/$SRC_DIR" 2>/dev/null \
+        MATCHES=$(grep -rE "$pattern" "$ROOT_DIR/$SRC_DIR" 2>/dev/null \
             | grep -v "process\.env" \
             | grep -v "os\.environ" \
             | grep -v "os\.Getenv" \
@@ -292,7 +292,8 @@ elif [ -d "$ROOT_DIR/$SRC_DIR" ]; then
             | grep -v "\.example" \
             | grep -v "\.sample" \
             | grep -v "node_modules" \
-            | head -1 > /dev/null 2>&1; then
+            || true)
+        if [ -n "$MATCHES" ]; then
             SECRET_FOUND=true
             break
         fi

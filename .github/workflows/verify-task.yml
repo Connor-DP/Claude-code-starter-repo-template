@@ -131,7 +131,8 @@ jobs:
 
       - name: Install gitleaks
         run: |
-          curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.21.2_linux_x64.tar.gz | tar xz
+          GITLEAKS_VERSION=$(curl -sI https://github.com/gitleaks/gitleaks/releases/latest | grep -i '^location:' | sed 's|.*/v||' | tr -d '\r')
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar xz
           sudo mv gitleaks /usr/local/bin/
 
       - name: Scan for secrets
@@ -196,13 +197,14 @@ jobs:
           fi
 
           # Check for hardcoded credentials
-          if grep -rE "(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}" \
+          CRED_MATCHES=$(grep -rE "(password|passwd|pwd)[[:space:]]*[:=][[:space:]]*['\"][^'\"]{4,}" \
             --include="*.ts" --include="*.js" --include="*.py" --include="*.go" --include="*.rs" \
             . 2>/dev/null \
             | grep -v "process\.env\|os\.environ\|os\.Getenv\|env::var" \
             | grep -v "node_modules\|venv\|target" \
             | grep -v "//\|#" \
-            | head -1 > /dev/null 2>&1; then
+            || true)
+          if [ -n "$CRED_MATCHES" ]; then
             echo "Possible hardcoded credentials found"
             ISSUES=$((ISSUES + 1))
           fi
